@@ -19,28 +19,31 @@
 ## THESE ARE EXTENSIONS OF SPM MATLAB CODE WITH SLIGHT MODIFICATIONS IN ORDER TO LOOP THE PROCESS OVER FOR OUR 126 PPT'S
   
 
-##########################################################
-#####                   PREAMBULE                     ####
+### ################################################## ###
+#####                   PREAMBLE                      ####
 ####         Installation of necessary packgs.         ###
-##########################################################
+### ################################################## ###
 
 
 install.packages(c("mgcv","gamair","oro.nifti","memsic"))
 library(mgcv);library(gamair);library(oro.nifti);library(memisc)
 
 
-##########################################################
+### ################################################## ###
 #####             IMPORT NIFTI FILES                  ####
 ####            f.clean  (PPT,z,x,y,pet)               ###
-##########################################################
+### ################################################## ###
 
-## Set as working directory -> directory with .hdr/.img NIfTI files and Demographics .csv files
 
-setwd("~/MEGA/PhD/4. Wood Example (GAM's)/Brain Imaging Example (Simon Wood)/PETimg_masked")
+## Set as working directory -> directory with .hdr/.img NIfTI files, mask, and Demographics .csv file
 
-f.clean <- function(name) { #### f.clean is meant for CLEANING ONE SINGLE PPT DATA
+setwd("/Users/Juan A. Arias/Documents/GitHub/SCCneuroimage/PETimg_masked") # My Directory
+
+demo <- read.csv2("Demographics.csv")
+
+f.clean <- function(name) { #### f.clean is meant for CLEANING ONE SINGLE-PPT DATA, then we loop it
   
-  # Read the NIFTI image, transform it to dataframe, preserve slice Z and organize the table
+  # Read NIFTI image, transform it to dataframe, preserve slice Z and organize the table
   
   ## Load Data
   
@@ -49,7 +52,7 @@ f.clean <- function(name) { #### f.clean is meant for CLEANING ONE SINGLE PPT DA
   n = img_data(file)
   n = to.data.frame(n)
   
-  ## Prepare data.frame base where surther data from the loop will be integrated
+  ## Prepare data.frame base where further data from the loop will be integrated
   
   dataframe <- data.frame(z=integer(),x=integer(),y=integer(),pet=integer()) 
   
@@ -71,44 +74,43 @@ f.clean <- function(name) { #### f.clean is meant for CLEANING ONE SINGLE PPT DA
            `61`,`62`,`63`,`64`,`65`,`66`,`67`,`68`,`69`,`70`,`71`,`72`,`73`,`74`,`75`,`76`,`77`,`78`,`79`)
     detach(n_lim)
     
-    temp0 = data.frame(z,x,y,pet) # tmeporal dataframe
-    temp1 <- print(temp0) # is this necessary?
+    temp0 = data.frame(z,x,y,pet) # temporal dataframe
+    temp1 <- print(temp0) # unsure whether this is necessary but, if things work, don't touch them
     dataframe <- rbind(dataframe,temp1) # sum new data with previous data
     
   }
   
-  #Demographics: PPT, group (AD/CN), sex, age.
+  # Demographics: PPT, group (AD/CN), sex, age.
   
-  demo <- read.csv2("Demographics.csv")
-  demo <- demo[demo$PPT==namex,]
+  demog <- demo[demo$PPT==namex,]
   
-  PPT <- rep(demo$PPT,length.out=7505)
-  group <-rep(demo$Group,length.out=7505)
-  sex <-rep(demo$Sex,length.out=7505)
-  age <-rep(demo$Age,length.out=7505)
+  PPT <- rep(demog$PPT,length.out=7505)
+  group <-rep(demog$Group,length.out=7505)
+  sex <-rep(demog$Sex,length.out=7505)
+  age <-rep(demog$Age,length.out=7505)
   
   temp2 <- data.frame(PPT,group,sex,age)
   dataframe <- cbind(temp2,dataframe)
   
-  print(dataframe) # Necessary for asigning an object name
-  
-  
+  print(dataframe) # Necessary for assigning an object name
+
 }
 
-#Example(s):
-"003_S_1059" = f.clean("003_S_1059")
-head(`003_S_1059`)  # Some values are Zeros due to the masking process
+
+# Example of conversion from NIFTI to R dataframe:
+
+example = f.clean("003_S_1059")
+head(example)  # Some values are Zeros due to the masking process
 
 
+### ################################################## ###
+#####              CREATE   DATABASE                  ####
+### ################################################## ###
 
-##########################################################
-#####              COMPLETE DATABASE                  ####
-##########################################################
 
-files <- list.files(path="~/MEGA/PhD/4. Wood Example (GAM's)/Brain Imaging Example (Simon Wood)/PETimg_masked", 
-                    pattern="*.img", full.names=F, recursive=FALSE) # list of files
-
+files <- list.files(path=getwd(), pattern="*.img", full.names=F, recursive=FALSE) # list of files
 files <- gsub(files, pattern=".img$", replacement="") # remove file extension .img
+files
 
 database <- data.frame(PPT=integer(),group=integer(),sex=integer(),age=integer(),z=integer(),x=integer(),y=integer(),pet=integer())
 #create data.frame to include data
@@ -120,10 +122,9 @@ for (i in 1:length(files)) { #loop to include every PPT in the dataframe
   
 }
 
-nrow(database[database$pet<0,]) # Existen valores negativos
+nrow(database[database$pet<0,]) # There are negative values (ilogical)
 
-database$pet[database$pet<0]<- NaN  # Se convierten tanto los negativos como los zeros en NaN !!! CAREFUL HERE por que no despues del mean normalization=?
-
+database$pet[database$pet<0]<- NaN  # Convert zeros to NaN 
 database$pet[database$pet==0] <- NaN 
 
 write.csv2(database,file="Database.csv",sep=";",na="NA") #export as .csv IF DESIRABLE
