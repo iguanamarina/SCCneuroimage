@@ -14,23 +14,28 @@
 #######################################################################\
 
 
+### ################################################## ###
+#####                NEUROIMAGE DATA                  ####
+### ################################################## ###
+
+
 ## PREVIOUS PROCESSING OF PET IMAGES (REALIGNEMENT, WRAPPING, CORREGISTRARION, NORMALIZATION, AND MASKING) DONE IN 'MATLAB'
 ## CHECK OUT: ../SCCneuroimage/Matlab Preprocessing Code/
 ## THESE ARE EXTENSIONS OF SPM MATLAB CODE WITH SLIGHT MODIFICATIONS IN ORDER TO LOOP THE PROCESS OVER FOR OUR 126 PPT'S
   
 
 ### ################################################## ###
-#####                   PREAMBLE                      ####
+#####                 *PREAMBLE*                      ####
 ####         Installation of necessary packgs.         ###
 ### ################################################## ###
 
 
 install.packages(c("mgcv","gamair","oro.nifti","memsic"))
 library(mgcv);library(gamair);library(oro.nifti);library(memisc)
-
+memory.size(max = TRUE) # Not useful in Linux systems
 
 ### ################################################## ###
-#####             IMPORT NIFTI FILES                  ####
+#####            *IMPORT NIFTI FILES*                 ####
 ####            f.clean  (PPT,z,x,y,pet)               ###
 ### ################################################## ###
 
@@ -104,7 +109,7 @@ head(example)  # Some values are Zeros due to the masking process
 
 
 ### ################################################## ###
-#####              CREATE   DATABASE                  ####
+#####             *CREATE   DATABASE*                 ####
 ### ################################################## ###
 
 
@@ -124,27 +129,21 @@ for (i in 1:length(files)) { #loop to include every PPT in the dataframe
 
 nrow(database[database$pet<0,]) # There are negative values (ilogical)
 
-database$pet[database$pet<0]<- NaN  # Convert zeros to NaN 
-database$pet[database$pet==0] <- NaN 
-
-write.csv2(database,file="Database.csv",sep=";",na="NA") #export as .csv IF DESIRABLE
+database$pet[database$pet<0]<- NaN  # Convert negatives to NaN 
+database$pet[database$pet==0] <- NaN # Convert zeros to NaN 
 
 
-
-##########################################################
-###            MEAN AVERAGE NORMALIZATION     (!!!!!)         ###
-##########################################################
+### ####################################################### ###
+#####           *MEAN AVERAGE NORMALIZATION*               ####
+### ####################################################### ###
 
 
 mean.data <- data.frame(pet=integer(),pet_normal=integer())
-# Data is the data.framecreated for masked and mean averaged data
-
-memory.size(max = TRUE) # No es necesario en Linux
 
 for (i in 1:length(files)) {
   
-  temp <- database[database$PPT==files[i],]
-  temp <- temp[,8]
+  temp <- database[database$PPT==files[i],8]
+  #temp <- temp[,8]
   mean <- mean(as.numeric(temp),na.rm=T)
   pet_normal <- as.data.frame(temp/mean)
   colnames(pet_normal)<-c("pet_normal")
@@ -155,102 +154,129 @@ for (i in 1:length(files)) {
 }
 
 mean.data <- mean.data[,2]
-colnames(mean.data)<-c("pet")
 database <- cbind(database,mean.data)
-database$pet<-database$mean.data
-database<-database[,-9]
+colnames(database)<-c("PPT","group","sex","age","z","x","y","pet","pet_normal")
 
+# Export complete database (with non normalized and normalized values)
+## Set as working directory -> directory where you want to save Database.Rdata
+
+setwd("/Users/Juan A. Arias/Documents/GitHub/SCCneuroimage") 
 write.table(database,file="Database.csv",sep=";",na="NA") #export as .csv IF DESIRABLE
-
-save(database,file="data.Rda")
-
-
-# Now we have the database with our complete processed stuff and we can move on with this towards SCC's
+save(database,file="database.Rda") #export as .Rda IF DESIRABLE
 
 
+# now to continue with our workflow:
+
+database<-database[,-8]   # Usually you will be working with normalized PET values but you can skip this step 
+                          # if you want to keep the non-normalized values for something
 
 
-##########################################################
-###            HERE STARTS PROPERLY SCC CODE           ###
-##########################################################
+### ########################################################## ###
+#####          SIMULTANEOUS CONFIDENCE CORRIDORS              ####
+### ########################################################## ###
 
-# load("F:/MEGAsync/PhD/data.Rda")
+
+# load("C:/Users/Juan A. Arias/Documents/GitHub/SCCneuroimage/database.Rda") # if not loaded already
+
+# This part of the code needs a series of packages which to date (09/2020) are only available at GitHub
 
 # Install packages from GitHub: #
 
-install.packages("devtools");library(devtools) 
-install.packages("remotes");library(remotes) 
-install.packages("readr")
-install.packages("imager")
-install.packages("itsadug") 
-install.packages("ggplot2") # Para la visualizacion
-install.packages("contoureR")
+install.packages(c("devtools","remotes","readr","imager","itsadug","ggplot2","contoureR"))
+library(devtools);library(remotes);library(readr);library(imager);library(itsadug);library(ggplot2);library(contoureR)
+
 Sys.setenv("R_REMOTES_NO_ERRORS_FROM_WARNINGS"=TRUE) # Forces installation to finish even with warning messages (EXTREMELY NECESSARY)
 remotes::install_github("funstatpackages/BPST")
 remotes::install_github("funstatpackages/Triangulation")
 remotes::install_github("funstatpackages/ImageSCC")
 
-library(BPST);library(Triangulation);library(ImageSCC);library(readr);library(imager);library(itsadug);library(fields)
+library(BPST);library(Triangulation);library(ImageSCC)
 
-#########################################################################//
 
-# Preliminary modifications and visualization:
+# Preliminary modifications and exploratory analysis:
 
 Data<-database
 attach(Data)
 head(Data)
 str(Data)
 
-#########################################################################//
 
-# LIST PPT's:
+### ########################################################## ###
+#####           *COMPREHENSIVE LISTS OF PPT'S*                ####
+### ########################################################## ###
+
+
+# Working in a Functional Data Analysis (FDA) framework requires some transformations of the data. Namely, we will need to
+# create data.frames in which every PPT corresponds to one row and each column to one PET value out of 7505 in a slice. 
+# This is the way of approaching the data in FDA and obviously we will be limited to one brain slice at a time. 
+# In order to create the SCC matrices we will also need the PPTs names listed depending on their sex, group... that's
+# why we do it here in advance for AD, CN, female & male, <75 & >75... and combinations.
+
 
 names<-as.vector(Data[,1])
 names<-names[duplicated(names)!=TRUE]
 ((length(names))*592895)==nrow(Data)  # Every PPT has 592.895 measures. PPT*measures=nrow(Data). Should return a TRUE
 
+
+# LIST OF CONTROL PPT'S #
+
 names_CN<-as.vector(Data[,1])[Data$group=="CN"]
-names_CN<-names_CN[duplicated(names_CN)!=TRUE]
-nCN=length(names_CN)
+names_CN<-names_CN[duplicated(names_CN)!=TRUE]; names_CN
+
+# LIST OF ALZHEIMER DISEASE PPT'S #
 
 names_AD<-as.vector(Data[,1])[Data$group=="AD"]
-names_AD<-names_AD[duplicated(names_AD)!=TRUE]
-nAD=length(names_AD)
+names_AD<-names_AD[duplicated(names_AD)!=TRUE]; names_AD
 
-names_AD_F<-as.vector(Data[,1])[Data$group=="AD" & Data$sex=="F"]
-names_AD_F<-names_AD_F[duplicated(names_AD_F)!=TRUE]
-nAD_F=length(names_AD_F)
-
-names_AD_M<-as.vector(Data[,1])[Data$group=="AD" & Data$sex=="M"]
-names_AD_M<-names_AD_M[duplicated(names_AD_M)!=TRUE]
-nAD_M=length(names_AD_M)
+# LIST OF MALE CONTROL PPT'S #
 
 names_CN_M<-as.vector(Data[,1])[Data$sex=="M" & Data$group=="CN"]
-names_CN_M<-names_CN_M[duplicated(names_CN_M)!=TRUE]
-nCN_M=length(names_CN_M)
+names_CN_M<-names_CN_M[duplicated(names_CN_M)!=TRUE]; names_CN_M
+
+# LIST OF FEMALE CONTROL PPT'S #
 
 names_CN_F<-as.vector(Data[,1])[Data$sex=="F" & Data$group=="CN"]
-names_CN_F<-names_CN_F[duplicated(names_CN_F)!=TRUE]
-nCN_F=length(names_CN_F)
+names_CN_F<-names_CN_F[duplicated(names_CN_F)!=TRUE]; names_CN_F
+
+# LIST OF FEMALE ALZHEIMER PPT'S #
+
+names_AD_F<-as.vector(Data[,1])[Data$sex=="F" & Data$group=="AD"]
+names_AD_F<-names_AD_F[duplicated(names_AD_F)!=TRUE];names_AD_F
+
+# LIST OF MALE ALZHEIMER PPT'S #
+
+names_AD_M<-as.vector(Data[,1])[Data$sex=="M" & Data$group=="AD"]
+names_AD_M<-names_AD_M[duplicated(names_AD_M)!=TRUE]; names_AD_M
+
+# LIST OF ALZHEIMER PPT'S <=75 Y.O. #
 
 names_AD_less_75<-as.vector(Data[,1])[Data$age<=75 & Data$group=="AD"]
-names_AD_less_75<-names_AD_less_75[duplicated(names_AD_less_75)!=TRUE]
-nAD_less_75=length(names_AD_less_75)
+names_AD_less_75<-names_AD_less_75[duplicated(names_AD_less_75)!=TRUE]; names_AD_less_75
+
+# LIST OF ALZHEIMER PPT'S >75 Y.O. #
 
 names_AD_more_75<-as.vector(Data[,1])[Data$age>75 & Data$group=="AD"]
-names_AD_more_75<-names_AD_more_75[duplicated(names_AD_more_75)!=TRUE]
-nAD_more_75=length(names_AD_more_75)
+names_AD_more_75<-names_AD_more_75[duplicated(names_AD_more_75)!=TRUE]; names_AD_more_75
+
+# LIST OF CONTROL PPT'S <=75 Y.O. #
 
 names_CN_less_75<-as.vector(Data[,1])[Data$age<=75 & Data$group=="CN"]
-names_CN_less_75<-names_CN_less_75[duplicated(names_CN_less_75)!=TRUE]
-nCN_less_75=length(names_CN_less_75)
+names_CN_less_75<-names_CN_less_75[duplicated(names_CN_less_75)!=TRUE]; names_CN_less_75
+
+# LIST OF CONTROL PPT'S >75 Y.O. #
 
 names_CN_more_75<-as.vector(Data[,1])[Data$age>75 & Data$group=="CN"]
-names_CN_more_75<-names_CN_more_75[duplicated(names_CN_more_75)!=TRUE]
-nCN_more_75=length(names_CN_more_75)
+names_CN_more_75<-names_CN_more_75[duplicated(names_CN_more_75)!=TRUE]; names_CN_more_75
 
 
-## FUNCTION TO CREATE Y's FOR SCC's in the shape of a dataframe with only one row
+
+### ########################################################## ###
+#####           *FUNCTIONS FOR SCCs DATA.FRAME*               ####
+### ########################################################## ###
+
+## FUNCTIONS TO CREATE Y's FOR SCC's in the shape of a dataframe with only one row. 
+## We then loop it in order to get one row p/PPT (that is the second paragraph which accompanies every function)
+## IN SUMMARY: FUNCTION
 
 
 # CN function:
@@ -264,14 +290,15 @@ YcreatorCN <- function(i){
   print(Y)
 }
 
-# CN LOOP: now every CN-PPT will be one row, as ImageSCC requires
+    # CN LOOP: now every CN-PPT will be one row, as ImageSCC requires
+    
+    SCC_matrix_CN <- matrix(ncol = 7505,nrow=0)
+    for (i in 1:length(names_CN)){
+      temp<-YcreatorCN(i)
+      SCC_matrix_CN<-rbind(SCC_matrix_CN,temp)    
+    }
 
-SCC_matrix_CN <- matrix(ncol = 7505,nrow=0)
-for (i in 1:nCN){
-  temp<-YcreatorCN(i)
-  SCC_matrix_CN<-rbind(SCC_matrix_CN,temp)    
-}
-
+    
 # AD function:
 
 YcreatorAD <- function(i){
@@ -283,14 +310,15 @@ YcreatorAD <- function(i){
   print(Y)
 }
 
-# AD LOOP: now every AD-PPT will be one row, as ImageSCC requires
+    # AD LOOP: now every AD-PPT will be one row, as ImageSCC requires
+    
+    SCC_matrix_AD <- matrix(ncol = 7505,nrow=0)
+    for (i in 1:length(names_AD)){
+      temp<-YcreatorAD(i)
+      SCC_matrix_AD<-rbind(SCC_matrix_AD,temp)    
+    }
 
-SCC_matrix_AD <- matrix(ncol = 7505,nrow=0)
-for (i in 1:nAD){
-  temp<-YcreatorAD(i)
-  SCC_matrix_AD<-rbind(SCC_matrix_AD,temp)    
-}
-
+    
 # AD + Female function:
 
 YcreatorAD_F <- function(i){
@@ -302,13 +330,13 @@ YcreatorAD_F <- function(i){
   print(Y)
 }
 
-# AD + Female LOOP: now every AD-PPT will be one row, as ImageSCC requires
-
-SCC_matrix_AD_F <- matrix(ncol = 7505,nrow=0)
-for (i in 1:nAD_F){
-  temp<-YcreatorAD_F(i)
-  SCC_matrix_AD_F<-rbind(SCC_matrix_AD_F,temp)    
-}
+    # AD + Female LOOP: now every AD-PPT will be one row, as ImageSCC requires
+    
+    SCC_matrix_AD_F <- matrix(ncol = 7505,nrow=0)
+    for (i in 1:length(names_AD_F)){
+      temp<-YcreatorAD_F(i)
+      SCC_matrix_AD_F<-rbind(SCC_matrix_AD_F,temp)    
+    }
 
 
 # AD + Male function:
@@ -322,15 +350,17 @@ YcreatorAD_M <- function(i){
   print(Y)
 }
 
-# AD + Male LOOP: now every AD-PPT will be one row, as ImageSCC requires
+    
+    # AD + Male LOOP: now every AD-PPT will be one row, as ImageSCC requires
+    
+    SCC_matrix_AD_M <- matrix(ncol = 7505,nrow=0)
+    for (i in 1:length(names_AD_M)){
+      temp<-YcreatorAD_M(i)
+      SCC_matrix_AD_M<-rbind(SCC_matrix_AD_M,temp)    
+    }
 
-SCC_matrix_AD_M <- matrix(ncol = 7505,nrow=0)
-for (i in 1:nAD_M){
-  temp<-YcreatorAD_M(i)
-  SCC_matrix_AD_M<-rbind(SCC_matrix_AD_M,temp)    
-}
 
-
+    
 # CN + Female function:
 
 YcreatorCN_F <- function(i){
@@ -342,13 +372,14 @@ YcreatorCN_F <- function(i){
   print(Y)
 }
 
-# CN + Female LOOP: now every CNPPT will be one row, as ImageSCC requires
+    # CN + Female LOOP: now every CNPPT will be one row, as ImageSCC requires
+    
+    SCC_matrix_CN_F <- matrix(ncol = 7505,nrow=0)
+    for (i in 1:length(names_CN_F)){
+      temp<-YcreatorCN_F(i)
+      SCC_matrix_CN_F<-rbind(SCC_matrix_CN_F,temp)    
+    }
 
-SCC_matrix_CN_F <- matrix(ncol = 7505,nrow=0)
-for (i in 1:nCN_F){
-  temp<-YcreatorCN_F(i)
-  SCC_matrix_CN_F<-rbind(SCC_matrix_CN_F,temp)    
-}
 
 
 # CN + Male function:
@@ -361,14 +392,14 @@ YcreatorCN_M <- function(i){
   Y[is.nan(Y)] <- 0
   print(Y)
 }
-
-# CN + Male LOOP: now every CN-PPT will be one row, as ImageSCC requires
-
-SCC_matrix_CN_M <- matrix(ncol = 7505,nrow=0)
-for (i in 1:nCN_M){
-  temp<-YcreatorCN_M(i)
-  SCC_matrix_CN_M<-rbind(SCC_matrix_CN_M,temp)    
-}
+    
+    # CN + Male LOOP: now every CN-PPT will be one row, as ImageSCC requires
+    
+    SCC_matrix_CN_M <- matrix(ncol = 7505,nrow=0)
+    for (i in 1:length(names_CN_M)){
+      temp<-YcreatorCN_M(i)
+      SCC_matrix_CN_M<-rbind(SCC_matrix_CN_M,temp)    
+    }
 
 
 # CN <75 function:
@@ -382,13 +413,13 @@ YcreatorCN_less_75 <- function(i){
   print(Y)
 }
 
-# CN <75 loop:
-
-SCC_matrix_CN_less_75 <- matrix(ncol = 7505,nrow=0)
-for (i in 1:nCN_less_75){
-  temp<-YcreatorCN_less_75(i)
-  SCC_matrix_CN_less_75<-rbind(SCC_matrix_CN_less_75,temp)    
-}
+    # CN <75 loop:
+    
+    SCC_matrix_CN_less_75 <- matrix(ncol = 7505,nrow=0)
+    for (i in 1:length(names_CN_less_75)){
+      temp<-YcreatorCN_less_75(i)
+      SCC_matrix_CN_less_75<-rbind(SCC_matrix_CN_less_75,temp)    
+    }
 
 
 # CN >75 function:
@@ -402,14 +433,15 @@ YcreatorCN_more_75 <- function(i){
   print(Y)
 }
 
-# CN >75 loop:
+    # CN >75 loop:
+    
+    SCC_matrix_CN_more_75 <- matrix(ncol = 7505,nrow=0)
+    for (i in 1:length(names_CN_more_75)){
+      temp<-YcreatorCN_more_75(i)
+      SCC_matrix_CN_more_75<-rbind(SCC_matrix_CN_more_75,temp)    
+    }
 
-SCC_matrix_CN_more_75 <- matrix(ncol = 7505,nrow=0)
-for (i in 1:nCN_more_75){
-  temp<-YcreatorCN_more_75(i)
-  SCC_matrix_CN_more_75<-rbind(SCC_matrix_CN_more_75,temp)    
-}
-
+    
 ## In summary: SCC_matrix's (both SCC_matrix_CN and SCC_matrix_AD) have on row for each patient (CN or AD) 
 ## and 7.505 columns, one for each value in slice z=30. This is needed in order to work with imageSCC pack.
 
@@ -425,13 +457,13 @@ YcreatorAD_less_75 <- function(i){
   print(Y)
 }
 
-# AD <75 loop:
-
-SCC_matrix_AD_less_75 <- matrix(ncol = 7505,nrow=0)
-for (i in 1:nAD_less_75){
-  temp<-YcreatorAD_less_75(i)
-  SCC_matrix_AD_less_75<-rbind(SCC_matrix_AD_less_75,temp)    
-}
+    # AD <75 loop:
+    
+    SCC_matrix_AD_less_75 <- matrix(ncol = 7505,nrow=0)
+    for (i in 1:length(names_AD_less_75)){
+      temp<-YcreatorAD_less_75(i)
+      SCC_matrix_AD_less_75<-rbind(SCC_matrix_AD_less_75,temp)    
+    }
 
 
 # AD >75 function:
@@ -445,20 +477,20 @@ YcreatorAD_more_75 <- function(i){
   print(Y)
 }
 
-# AD >75 loop:
+    # AD >75 loop:
+    
+    SCC_matrix_AD_more_75 <- matrix(ncol = 7505,nrow=0)
+    for (i in 1:length(names_AD_more_75)){
+      temp<-YcreatorAD_more_75(i)
+      SCC_matrix_AD_more_75<-rbind(SCC_matrix_AD_more_75,temp)    
+    }
 
-SCC_matrix_AD_more_75 <- matrix(ncol = 7505,nrow=0)
-for (i in 1:nAD_more_75){
-  temp<-YcreatorAD_more_75(i)
-  SCC_matrix_AD_more_75<-rbind(SCC_matrix_AD_more_75,temp)    
-}
 
 
-
-#########################################################################
-#     NOW THAT WE ALREADY HAVE THIS LIST AMD THE SCRIPT TO GET MORE     #
-#     WE TRY TO REPRODUCE SCC CORRIDORS FOR MULTIPLE PPT'S              #
-#########################################################################
+#########################################################################/
+#     NOW THAT WE ALREADY HAVE THIS LIST AMD THE SCRIPT TO GET MORE     #/
+#     WE TRY TO REPRODUCE SCC CORRIDORS FOR MULTIPLE PPT'S              #/
+#########################################################################/
 
 
 # Z are the coordinates where data is measures in the given grid:
@@ -637,9 +669,9 @@ dev.off()
 
 
 
-####################################################
+####################################################/
 #   AND NOW FOR A COMPARATION BETWEEN CN AND AD
-#################################################### 
+####################################################/ 
 
 
 SCC_COMP_1=scc.image(Ya=Y_AD,Yb=Y_CN,Z=Z,d.est=d.est,d.band=d.band,r=r,
@@ -782,9 +814,9 @@ points(points.N,
 
 
 
-####################################################
+####################################################/
 #   COMPARISON BETWEEN AD FEMALES AND AD MALES
-#################################################### 
+####################################################/ 
 
 
 SCC_COMP_MF1=scc.image(Ya=Y_F,Yb=Y_M,Z=Z,d.est=d.est,d.band=d.band,r=r,
@@ -900,9 +932,9 @@ points(points.N,
 # bg= background
 # lwd= line width
 
-################################################################################
+################################################################################/
 #   AND NOW FOR A COMPARATION BETWEEN AD male AND CN male AND SAME FOR female
-################################################################################
+################################################################################/
 
 
 
@@ -1017,7 +1049,7 @@ points(points.N,
 # bg= background
 # lwd= line width
 
-#############################
+#############################/
 
 
 SCC_COMP_LESS_75=scc.image(Ya=Y_AD_L_75,Yb=Y_CN_L_75,Z=Z,d.est=d.est,d.band=d.band,r=r,
@@ -1134,7 +1166,7 @@ points(points.N,
 
 
 
-#############################    
+#############################    /
 
 
 SCC_COMP_ADS_AGE=scc.image(Ya=Y_AD_M_75,Yb=Y_AD_L_75,Z=Z,d.est=d.est,d.band=d.band,r=r,
@@ -1194,7 +1226,7 @@ points(points.N,
 # lwd= line width
 
 
-##################          
+##################/          
 
 
 
@@ -1254,7 +1286,7 @@ points(points.N,
 # bg= background
 # lwd= line width
 
-############################
+############################/
 
 
 
@@ -1327,7 +1359,7 @@ points(points.N,
        cex=9) 
 
 
-##################################################
+##################################################/
 
 
 # Percentage of locations where the true difference between mean functions value fall within the SCC
