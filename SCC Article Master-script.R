@@ -193,6 +193,7 @@ remotes::install_github("funstatpackages/ImageSCC")
 library(BPST);library(Triangulation);library(ImageSCC)
 
 
+
 # Preliminary modifications and exploratory analysis:
 
 Data<-database
@@ -275,280 +276,293 @@ names_CN_more_75<-names_CN_more_75[duplicated(names_CN_more_75)!=TRUE]; names_CN
 ### ########################################################## ###
 
 ## FUNCTIONS TO CREATE Y's FOR SCC's in the shape of a dataframe with only one row. 
-## We then loop it in order to get one row p/PPT (that is the second paragraph which accompanies every function)
-## IN SUMMARY: FUNCTION
+## We then loop it in order to get one row p/PPT (that is the second code paragraph which accompanies every function)
+## IN SUMMARY: FUNCTION TO GET A SINGLE PPT DATA, TRANSFORM IT TO FUNCTIONAL DATA STYLE, AND THEN LOOP THAT PROCESS FOR ALL THE PPT'S YOU NEED
+## This is not the cleanest way to do this but I find it the most static for a shareable script. We could also define the Z level as other argument
+## of our function and then create a new matrix with every new loop (...)
 
 
 # CN function:
 
 YcreatorCN <- function(i){
-  Y <- subset(Data, Data$PPT==names_CN[i] & Data$z==30) # Y = Choose by PPT and Z always 30, group=change depending on the SCC you need
-  Y <- Y[1:7505,8] # Make sure to keep only 7505 (problematic before) and column 9 (responses)
+  Y <- subset(Data, Data$PPT==names_CN[i] & Data$z==30) # Y = Choose by PPT and Z=30, group=change depending on the SCC you need
+  Y <- Y[1:7505,8] # Make sure to keep only 7505 (problematic before) and column 8 (normalized PET responses)
   Y <- as.matrix(Y)
   Y=t(Y) 
   Y[is.nan(Y)] <- 0
   print(Y)
 }
 
-    # CN LOOP: now every CN-PPT will be one row, as ImageSCC requires
-    
-    SCC_matrix_CN <- matrix(ncol = 7505,nrow=0)
-    for (i in 1:length(names_CN)){
-      temp<-YcreatorCN(i)
-      SCC_matrix_CN<-rbind(SCC_matrix_CN,temp)    
-    }
+        # CN LOOP: now every CN-PPT will be one row, as ImageSCC package requires
+        
+        SCC_matrix_CN <- matrix(ncol = 7505,nrow=0)
+        for (i in 1:length(names_CN)){
+          temp<-YcreatorCN(i)
+          SCC_matrix_CN<-rbind(SCC_matrix_CN,temp)    
+        }
 
     
 # AD function:
 
 YcreatorAD <- function(i){
-  Y <- subset(Data, Data$PPT==names_AD[i] & Data$z==30) # Y = Choose by PPT and Z always 30, group=change depending on the SCC you need
-  Y <- Y[1:7505,8] # Make sure to keep only 7505 (problematic before) and column 9 (responses)
+  Y <- subset(Data, Data$PPT==names_AD[i] & Data$z==30) 
+  Y <- Y[1:7505,8] 
   Y <- as.matrix(Y)
   Y=t(Y) 
   Y[is.nan(Y)] <- 0
   print(Y)
 }
 
-    # AD LOOP: now every AD-PPT will be one row, as ImageSCC requires
-    
-    SCC_matrix_AD <- matrix(ncol = 7505,nrow=0)
-    for (i in 1:length(names_AD)){
-      temp<-YcreatorAD(i)
-      SCC_matrix_AD<-rbind(SCC_matrix_AD,temp)    
-    }
+        # AD LOOP: 
+        
+        SCC_matrix_AD <- matrix(ncol = 7505,nrow=0)
+        for (i in 1:length(names_AD)){
+          temp<-YcreatorAD(i)
+          SCC_matrix_AD<-rbind(SCC_matrix_AD,temp)    
+        }
 
+        
+### THE FOLLOWING FUNCTIONS AND LOOPS ARE FOR COMPARATIONS ACCORDING TO SEX:
+                
     
 # AD + Female function:
 
 YcreatorAD_F <- function(i){
-  Y <- subset(Data, Data$PPT==names_AD_F[i] & Data$z==30) # Y = Choose by PPT and Z always 30, group=change depending on the SCC you need
-  Y <- Y[1:7505,8] # Make sure to keep only 7505 (problematic before) and column 9 (responses)
+  Y <- subset(Data, Data$PPT==names_AD_F[i] & Data$z==30) 
+  Y <- Y[1:7505,8]
   Y <- as.matrix(Y)
   Y=t(Y) 
   Y[is.nan(Y)] <- 0
   print(Y)
 }
 
-    # AD + Female LOOP: now every AD-PPT will be one row, as ImageSCC requires
-    
-    SCC_matrix_AD_F <- matrix(ncol = 7505,nrow=0)
-    for (i in 1:length(names_AD_F)){
-      temp<-YcreatorAD_F(i)
-      SCC_matrix_AD_F<-rbind(SCC_matrix_AD_F,temp)    
-    }
+        # AD + Female LOOP:
+        
+        SCC_matrix_AD_F <- matrix(ncol = 7505,nrow=0)
+        for (i in 1:length(names_AD_F)){
+          temp<-YcreatorAD_F(i)
+          SCC_matrix_AD_F<-rbind(SCC_matrix_AD_F,temp)    
+        }
 
 
 # AD + Male function:
 
 YcreatorAD_M <- function(i){
-  Y <- subset(Data, Data$PPT==names_AD_M[i] & Data$z==30) # Y = Choose by PPT and Z always 30, group=change depending on the SCC you need
-  Y <- Y[1:7505,8] # Make sure to keep only 7505 (problematic before) and column 9 (responses)
+  Y <- subset(Data, Data$PPT==names_AD_M[i] & Data$z==30) 
+  Y <- Y[1:7505,8] 
   Y <- as.matrix(Y)
   Y=t(Y) 
   Y[is.nan(Y)] <- 0
   print(Y)
 }
 
-    
-    # AD + Male LOOP: now every AD-PPT will be one row, as ImageSCC requires
-    
-    SCC_matrix_AD_M <- matrix(ncol = 7505,nrow=0)
-    for (i in 1:length(names_AD_M)){
-      temp<-YcreatorAD_M(i)
-      SCC_matrix_AD_M<-rbind(SCC_matrix_AD_M,temp)    
-    }
+        
+        # AD + Male LOOP: 
+        
+        SCC_matrix_AD_M <- matrix(ncol = 7505,nrow=0)
+        for (i in 1:length(names_AD_M)){
+          temp<-YcreatorAD_M(i)
+          SCC_matrix_AD_M<-rbind(SCC_matrix_AD_M,temp)    
+        }
 
 
     
 # CN + Female function:
 
 YcreatorCN_F <- function(i){
-  Y <- subset(Data, Data$PPT==names_CN_F[i] & Data$z==30) # Y = Choose by PPT and Z always 30, group=change depending on the SCC you need
-  Y <- Y[1:7505,8] # Make sure to keep only 7505 (problematic before) and column 9 (responses)
+  Y <- subset(Data, Data$PPT==names_CN_F[i] & Data$z==30) 
+  Y <- Y[1:7505,8] 
   Y <- as.matrix(Y)
   Y=t(Y) 
   Y[is.nan(Y)] <- 0
   print(Y)
 }
 
-    # CN + Female LOOP: now every CNPPT will be one row, as ImageSCC requires
-    
-    SCC_matrix_CN_F <- matrix(ncol = 7505,nrow=0)
-    for (i in 1:length(names_CN_F)){
-      temp<-YcreatorCN_F(i)
-      SCC_matrix_CN_F<-rbind(SCC_matrix_CN_F,temp)    
-    }
+        # CN + Female LOOP: 
+        
+        SCC_matrix_CN_F <- matrix(ncol = 7505,nrow=0)
+        for (i in 1:length(names_CN_F)){
+          temp<-YcreatorCN_F(i)
+          SCC_matrix_CN_F<-rbind(SCC_matrix_CN_F,temp)    
+        }
 
 
 
 # CN + Male function:
 
 YcreatorCN_M <- function(i){
-  Y <- subset(Data, Data$PPT==names_CN_M[i] & Data$z==30) # Y = Choose by PPT and Z always 30, group=change depending on the SCC you need
-  Y <- Y[1:7505,8] # Make sure to keep only 7505 (problematic before) and column 9 (responses)
+  Y <- subset(Data, Data$PPT==names_CN_M[i] & Data$z==30) 
+  Y <- Y[1:7505,8] 
   Y <- as.matrix(Y)
   Y=t(Y) 
   Y[is.nan(Y)] <- 0
   print(Y)
 }
     
-    # CN + Male LOOP: now every CN-PPT will be one row, as ImageSCC requires
-    
-    SCC_matrix_CN_M <- matrix(ncol = 7505,nrow=0)
-    for (i in 1:length(names_CN_M)){
-      temp<-YcreatorCN_M(i)
-      SCC_matrix_CN_M<-rbind(SCC_matrix_CN_M,temp)    
-    }
+        # CN + Male LOOP: 
+        
+        SCC_matrix_CN_M <- matrix(ncol = 7505,nrow=0)
+        for (i in 1:length(names_CN_M)){
+          temp<-YcreatorCN_M(i)
+          SCC_matrix_CN_M<-rbind(SCC_matrix_CN_M,temp)    
+        }
 
+        
+        
+### THE FOLLOWING FUNCTIONS AND LOOPS ARE FOR COMPARATIONS ACCORDING TO AGE:
+                
 
 # CN <75 function:
 
 YcreatorCN_less_75 <- function(i){
-  Y <- subset(Data, Data$PPT==names_CN_less_75[i] & Data$z==30) # Y = Choose by PPT and Z always 30, group=change depending on the SCC you need
-  Y <- Y[1:7505,8] # Make sure to keep only 7505 (problematic before) and column 9 (responses)
+  Y <- subset(Data, Data$PPT==names_CN_less_75[i] & Data$z==30) 
+  Y <- Y[1:7505,8] 
   Y <- as.matrix(Y)
   Y=t(Y) 
   Y[is.nan(Y)] <- 0
   print(Y)
 }
 
-    # CN <75 loop:
-    
-    SCC_matrix_CN_less_75 <- matrix(ncol = 7505,nrow=0)
-    for (i in 1:length(names_CN_less_75)){
-      temp<-YcreatorCN_less_75(i)
-      SCC_matrix_CN_less_75<-rbind(SCC_matrix_CN_less_75,temp)    
-    }
+        # CN <75 loop:
+        
+        SCC_matrix_CN_less_75 <- matrix(ncol = 7505,nrow=0)
+        for (i in 1:length(names_CN_less_75)){
+          temp<-YcreatorCN_less_75(i)
+          SCC_matrix_CN_less_75<-rbind(SCC_matrix_CN_less_75,temp)    
+        }
 
 
 # CN >75 function:
 
 YcreatorCN_more_75 <- function(i){
-  Y <- subset(Data, Data$PPT==names_CN_more_75[i] & Data$z==30) # Y = Choose by PPT and Z always 30, group=change depending on the SCC you need
-  Y <- Y[1:7505,8] # Make sure to keep only 7505 (problematic before) and column 9 (responses)
+  Y <- subset(Data, Data$PPT==names_CN_more_75[i] & Data$z==30) 
+  Y <- Y[1:7505,8] 
   Y <- as.matrix(Y)
   Y=t(Y) 
   Y[is.nan(Y)] <- 0
   print(Y)
 }
 
-    # CN >75 loop:
-    
-    SCC_matrix_CN_more_75 <- matrix(ncol = 7505,nrow=0)
-    for (i in 1:length(names_CN_more_75)){
-      temp<-YcreatorCN_more_75(i)
-      SCC_matrix_CN_more_75<-rbind(SCC_matrix_CN_more_75,temp)    
-    }
-
-    
-## In summary: SCC_matrix's (both SCC_matrix_CN and SCC_matrix_AD) have on row for each patient (CN or AD) 
-## and 7.505 columns, one for each value in slice z=30. This is needed in order to work with imageSCC pack.
+        # CN >75 loop:
+        
+        SCC_matrix_CN_more_75 <- matrix(ncol = 7505,nrow=0)
+        for (i in 1:length(names_CN_more_75)){
+          temp<-YcreatorCN_more_75(i)
+          SCC_matrix_CN_more_75<-rbind(SCC_matrix_CN_more_75,temp)    
+        }
 
 
 # AD <75 function:
 
 YcreatorAD_less_75 <- function(i){
-  Y <- subset(Data, Data$PPT==names_AD_less_75[i] & Data$z==30) # Y = Choose by PPT and Z always 30, group=change depending on the SCC you need
-  Y <- Y[1:7505,8] # Make sure to keep only 7505 (problematic before) and column 9 (responses)
+  Y <- subset(Data, Data$PPT==names_AD_less_75[i] & Data$z==30)
+  Y <- Y[1:7505,8] 
   Y <- as.matrix(Y)
   Y=t(Y) 
   Y[is.nan(Y)] <- 0
   print(Y)
 }
 
-    # AD <75 loop:
-    
-    SCC_matrix_AD_less_75 <- matrix(ncol = 7505,nrow=0)
-    for (i in 1:length(names_AD_less_75)){
-      temp<-YcreatorAD_less_75(i)
-      SCC_matrix_AD_less_75<-rbind(SCC_matrix_AD_less_75,temp)    
-    }
+        # AD <75 loop:
+        
+        SCC_matrix_AD_less_75 <- matrix(ncol = 7505,nrow=0)
+        for (i in 1:length(names_AD_less_75)){
+          temp<-YcreatorAD_less_75(i)
+          SCC_matrix_AD_less_75<-rbind(SCC_matrix_AD_less_75,temp)    
+        }
 
 
 # AD >75 function:
 
 YcreatorAD_more_75 <- function(i){
-  Y <- subset(Data, Data$PPT==names_AD_more_75[i] & Data$z==30) # Y = Choose by PPT and Z always 30, group=change depending on the SCC you need
-  Y <- Y[1:7505,8] # Make sure to keep only 7505 (problematic before) and column 9 (responses)
+  Y <- subset(Data, Data$PPT==names_AD_more_75[i] & Data$z==30) 
+  Y <- Y[1:7505,8] 
   Y <- as.matrix(Y)
   Y=t(Y) 
   Y[is.nan(Y)] <- 0
   print(Y)
 }
 
-    # AD >75 loop:
-    
-    SCC_matrix_AD_more_75 <- matrix(ncol = 7505,nrow=0)
-    for (i in 1:length(names_AD_more_75)){
-      temp<-YcreatorAD_more_75(i)
-      SCC_matrix_AD_more_75<-rbind(SCC_matrix_AD_more_75,temp)    
-    }
+        # AD >75 loop:
+        
+        SCC_matrix_AD_more_75 <- matrix(ncol = 7505,nrow=0)
+        for (i in 1:length(names_AD_more_75)){
+          temp<-YcreatorAD_more_75(i)
+          SCC_matrix_AD_more_75<-rbind(SCC_matrix_AD_more_75,temp)    
+        }
 
 
+        
+### ########################################################## ###
+#####                *CONTOURS OF NEURO-DATA*                 ####
+### ########################################################## ###
+        
+        
+## Now that we have our data prepared in the structure we need it to be, we also need the triangulation parameters.
+## However, before generating the Delaunay Triangulation grid, we need to know the contour/boundaries of our data,
+## otherwise we won't be adjusting to the true shape of our data and the results will be critically affected.
 
-#########################################################################/
-#     NOW THAT WE ALREADY HAVE THIS LIST AMD THE SCRIPT TO GET MORE     #/
-#     WE TRY TO REPRODUCE SCC CORRIDORS FOR MULTIPLE PPT'S              #/
-#########################################################################/
-
-
-# Z are the coordinates where data is measures in the given grid:
+        
+# Z are the coordinates where data is measured:
 
 x <-rep(1:79, each=95, length.out = 7505) 
 y <-rep(1:95,length.out = 7505)
-Z <- cbind(as.matrix(x),as.matrix(y))
+Z <- cbind(as.matrix(x),as.matrix(y)); Z
 
 
 # Triangulation Parameters: this code is made for a custom triangulation for the position of our PET data
-# The package provides some simple templates but for optimal performance we need to find the boundaries of our data manually
+# The package provides some simple templates but for optimal performance we need to find the boundaries of our data MANUALLY
+# If we want to extract contour for other slice (not Z=30) we would have to go back, change corresponding function+loop and then with
+# the new SCC matrix, come back here and extract boundaries.
 
-
-dat <- cbind(Z,as.matrix(SCC_matrix_AD[1,])) # takes a sample to calculate boundaries
+dat <- cbind(Z,as.matrix(SCC_matrix_AD[1,])) # We take a sample to calculate boundaries
 dat <- as.data.frame(dat)
 dat[is.na(dat)] <- 0
 sum(is.na(dat$pet)) # should be = 0
 head(dat)
 
-memory.size(max = TRUE) # Usually necessary
+  ## memory.size(max = TRUE) # In my case this was necessary using a laptop.
 
-library(ggplot2) # Para la visualizacion
-library(contoureR) # For contours
 
-rownames(dat) <- NULL # Quitar la indexacion a las filas, por alguna razón esto también me ha dado problemas
-df = getContourLines(dat[1:7504,], # por último, seleccionar todas las filas menos una (!!!)
-                     levels=c(0)) # Podr�???a especificar otros saltos pero con c(0) se busca el salto entre 0 y el resto.
+rownames(dat) <- NULL # Remove row numbering, for some reason this can be problematic sometimes
+
+df = getContourLines(dat[1:7504,], # select all rows but for the last one
+                     levels=c(0)) # and search for the jump between PET=0 and other value, that will be the boundary
 
 ggplot(df,aes(x,y,colour=z)) + geom_path() # Display of brain boundaries for Z=30
 
-contour30=df # Contour in z=30 -> contour30
+contour30=df # Contour in z=30 -> contour30 (change if using a different Z)
 head(contour30);str(contour30)
 
-### Now for the different sets of coordinates: two holes included.
+
+### Now for the different sets of coordinates as we will need external boundaries and internal holes in a list:
 
 contour<-function(x){
   
-  aa<-contour30[contour30$GID==x,] # Nos quedamos con el GID==x (1,2,3)
-  a<-aa[,5:6] # De esas, nos quedamos solamente con las columnas de las coordenadas
-  print(a) # E imprimimos el resultado para luego hacer una lista
+  aa<-contour30[contour30$GID==x,] # We keep GID==x (0,1,2,3...)
+  a<-aa[,5:6] # Then we keep just the coordinates 
+  print(a) # and then print in order to loop and make a list
 }
 
 coord<-list()
 
-for (i in 0:max(contour30$GID)){
+for (i in 0:max(contour30$GID)){ #change contour30 to any other name previously assigned if necessary
   
   coord[[i+1]]<-contour(i)
   rownames(coord[[i+1]]) <- NULL
 }
 
-### Testing:
 
-head(coord[[1]],10); plot(coord[[1]])
-head(coord[[2]],10); points(coord[[2]])
-head(coord[[3]],10); points(coord[[3]])
+### Test the results are coherent:
+
+head(coord[[1]],10); plot(coord[[1]])   # external boundaries
+head(coord[[2]],10); points(coord[[2]]) # first hole
+head(coord[[3]],10); points(coord[[3]]) # second hole
 
 
-# TRIANGULATION PARAMETERS NOW TRULY
+### ########################################################## ###
+#####             *TRIANGULATION PARAMETERS*                  ####
+### ########################################################## ###
 
 
 # An integer parameter controlling the fineness of the triangulation and subsequent triangulation. As n increases the fineness increases. Usually, n = 8 seems to be a good choice.
