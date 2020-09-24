@@ -182,8 +182,8 @@ database<-database[,-8]   # Usually you will be working with normalized PET valu
 
 # Install packages from GitHub: #
 
-install.packages(c("devtools","remotes","readr","imager","itsadug","ggplot2","contoureR"))
-library(devtools);library(remotes);library(readr);library(imager);library(itsadug);library(ggplot2);library(contoureR)
+install.packages(c("devtools","remotes","readr","imager","itsadug","ggplot2","contoureR","fields"))
+library(devtools);library(remotes);library(readr);library(imager);library(itsadug);library(ggplot2);library(contoureR);library(fields)
 
 Sys.setenv("R_REMOTES_NO_ERRORS_FROM_WARNINGS"=TRUE) # Forces installation to finish even with warning messages (EXTREMELY NECESSARY)
 remotes::install_github("funstatpackages/BPST")
@@ -564,13 +564,14 @@ head(coord[[3]],10); points(coord[[3]]) # second hole
 #####             *TRIANGULATION PARAMETERS*                  ####
 ### ########################################################## ###
 
+# Now we create the triangulation grid using these coordinates and a N fineness degree value
+# N = An integer parameter controlling the fineness of the triangulation and subsequent triangulation. As n increases the fineness increases. Usually, n = 8 seems to be a good choice.
 
-# An integer parameter controlling the fineness of the triangulation and subsequent triangulation. As n increases the fineness increases. Usually, n = 8 seems to be a good choice.
-
-library(Triangulation)
 
 VT8=TriMesh(coord[[1]],8,list(as.matrix(coord[[2]]),as.matrix(coord[[3]])))
-head(VT8$V,10);head(VT8$Tr,10)
+head(VT8$V,10);head(VT8$Tr,10) # Vertices' coordinates and nodes you have to link to create the triangulation
+
+# N=8 is usually a good enough fineness degree although you can use finer triangulations which will take more time to compute
 
 VT15=TriMesh(coord[[1]],15,list(as.matrix(coord[[2]]),as.matrix(coord[[3]])))
 head(VT15$V,10);head(VT15$Tr,10)
@@ -579,9 +580,8 @@ VT25=TriMesh(coord[[1]],25,list(as.matrix(coord[[2]]),as.matrix(coord[[3]])))
 head(VT25$V,10);head(VT25$Tr,10)
 
 
-# In order to be consistent with the rest of the code:
+# In order to be consistent we use common names Brain.V and Brain.Tr. From here onwards most of the names follow the ones provided by Wang et al (2019)
 
-#(!!)PLAY AROUND HERE
 Brain.V <- VT15[[1]]
 Brain.Tr <- VT15[[2]]
 
@@ -589,14 +589,14 @@ head(Brain.V);head(Brain.Tr)
 
 
 V.est=as.matrix(Brain.V)
-# Brain.v<-cbind(Brain.V[,2],Brain.V[,1])
+# Brain.v<-cbind(Brain.V[,2],Brain.V[,1]) # In case you need to transpose the data
 Tr.est=as.matrix(Brain.Tr)
 
 V.band=as.matrix(Brain.V)
 Tr.band=as.matrix(Brain.Tr) 
 
 
-# Response Variable (multiple):
+# Response Variable:
 
 Y_CN=SCC_matrix_CN
 Y_AD=SCC_matrix_AD
@@ -613,9 +613,14 @@ Y_CN_M_75=SCC_matrix_CN_more_75
 Y_AD_L_75=SCC_matrix_AD_less_75
 Y_AD_M_75=SCC_matrix_AD_more_75
 
-# Parameters for SCC estimation: 
 
-#(!!) play around with these
+
+### ########################################################## ###
+#####        *OTHER PARAMETERS FOR SCC ESTIMATION*            ####
+### ########################################################## ###
+
+
+# Following Wang et al's recomendations:
 
 d.est=5 # degree of spline for mean function 
 d.band=2 # degree of spline for SCC
@@ -624,24 +629,30 @@ lambda=10^{seq(-6,3,0.5)} # penalty parameters
 alpha.grid=c(0.10,0.05,0.01) # vector of confidence levels
 
 
-# Run one sample SCC construction one time:
 
-library(ImageSCC)
-library(fields)
+### ########################################################## ###
+#####               *CONSTRUCTION OF SCC'S*                   ####
+### ########################################################## ###
+
+
+# Run one sample SCC construction:
+
 
 SCC_CN_1=scc.image(Ya=Y_CN,Z=Z,d.est=d.est,d.band=d.band,r=r,
                    V.est.a=V.est,Tr.est.a=Tr.est,
                    V.band.a=V.band,Tr.band.a=Tr.band,
                    penalty=TRUE,lambda=lambda,alpha.grid=alpha.grid,adjust.sigma=TRUE)
 
-plot(SCC_CN_1,
-     breaks=seq(from=0,to=2,length.out = 65),
-     col=,
-     xlab="Longitudinal (1-95)",
-     ylab="Transversal (1-79)",
-     sub="Control Group",
-     col.sub="black",
-     family ="serif")
+  plot(SCC_CN_1,
+       breaks=seq(from=0,to=2,length.out = 65),
+       col=,
+       xlab="Longitudinal (1-95)",
+       ylab="Transversal (1-79)",
+       sub="Control Group",
+       col.sub="black",
+       family ="serif")
+  
+    # This line of code shows triangulations and then SCCs for different alpha levels in a single-group 
 
 
 SCC_AD_1=scc.image(Ya=Y_AD,Z=Z,d.est=d.est,d.band=d.band,r=r,
@@ -650,36 +661,32 @@ SCC_AD_1=scc.image(Ya=Y_AD,Z=Z,d.est=d.est,d.band=d.band,r=r,
                    penalty=TRUE,lambda=lambda,alpha.grid=alpha.grid,adjust.sigma=TRUE)
 
 
-plot(SCC_AD_1,
-     breaks=seq(from=0,to=2,length.out = 65),
-     col=,
-     xlab="Longitudinal (1-95)",
-     ylab="Transversal (1-79)",
-     sub="Alzheimer Group",
-     col.sub="black",
-     family ="serif")
+  plot(SCC_AD_1,
+       breaks=seq(from=0,to=2,length.out = 65),
+       col=,
+       xlab="Longitudinal (1-95)",
+       ylab="Transversal (1-79)",
+       sub="Alzheimer Group",
+       col.sub="black",
+       family ="serif")
 
-par()
-par(mfrow=c(1,1),
-    col.main="white",
-    col.lab="white",
-    col.sub="white",
-    fg="black",
-    mfrow=c(1,1),
-    mar=c(2,4,4,2),
-    pin=c(9,7),
-    las=3)
-
-par(las=1)
-
-plot(SCC_AD_1,
-     axes=FALSE,
-     breaks=seq(from=0,to=2,length.out = 65),
-     col=,
-     family ="serif",
-     horizontal=F)
-
-dev.off()
+   # Same here for the other group (AD). These images are orientative, our main goal is obtaining SCCs for the difference
+   # between groups' mean functions.
+  
+   ## IN CASE YOU WANT TO EXPORT PLOTS THIS IS EASIER AFTER (...) :  
+  
+      par(las=1,
+          col.main="white",
+          col.lab="white",
+          col.sub="white")
+      
+      plot(SCC_AD_1,
+           axes=FALSE,
+           breaks=seq(from=0,to=2,length.out = 65),
+           col=,
+           family ="serif",
+           horizontal=F)
+      dev.off()
 
 
 
@@ -764,15 +771,6 @@ plot(SCC_COMP_2,
      col.sub="red",
      family ="serif")
 
-plot(SCC_COMP_2,
-     breaks=c(0,2),
-     col="turquoise",
-     #breaks=seq(from=0,to=2,length.out = 65),
-     xlab="Longitudinal (1-95)",
-     ylab="Transversal (1-79)",
-     sub="Difference between estimated mean functions: CNs - ADs",
-     col.sub="red",
-     family ="serif")  
 
 # Si haces la diferencia de medias y no hay diferencias significativas, 
 # el cero (0) tiene que estar incluido en los intervalos propuestos, indicando 
