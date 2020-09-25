@@ -690,139 +690,139 @@ SCC_AD_1=scc.image(Ya=Y_AD,Z=Z,d.est=d.est,d.band=d.band,r=r,
 
 
 
-####################################################/
-#   AND NOW FOR A COMPARATION BETWEEN CN AND AD
-####################################################/ 
+########################################################################################/
+#   AND NOW FOR A COMPARATION BETWEEN CN AND AD WHICH IS THE IMPORTANT SETUP            /
+########################################################################################/ 
 
+      
 
 SCC_COMP_1=scc.image(Ya=Y_AD,Yb=Y_CN,Z=Z,d.est=d.est,d.band=d.band,r=r,
                      V.est.a=V.est,Tr.est.a=Tr.est,
                      V.band.a=V.band,Tr.band.a=Tr.band,
                      penalty=TRUE,lambda=lambda,alpha.grid=alpha.grid,adjust.sigma=TRUE)    
-# With Yb included: Two-group SCC is constructed for the difference between the mean functions of Yb and Ya
-
-## IMPORTANTISIMO: LAS E.M.F APARECEN EN EL ORDEN EN QUE SE PONEN EN SCC.IMAGE (PRIMERO Ya Y LUEGO Yb)
-## PERO LOS SCC SE HACEN PARA LA DIFERENCIA ENTRE Yb Y Ya (!!!!!!!!!)
-
-plot(SCC_COMP_1,
-     breaks=c(0,2),
-     col="turquoise",
-     #breaks=seq(from=0,to=2,length.out = 65),
-     xlab="Longitudinal (1-95)",
-     ylab="Transversal (1-79)",
-     sub="Difference between estimated mean functions: CNs - ADs",
-     col.sub="red",
-     family ="serif")
 
 
-aa=SCC_COMP_1
+# With Yb included we now have a Two-group SCC for the difference between mean functions of Yb and Ya
 
-Z.band <- matrix(aa$Z.band,ncol=2) # Posiciones
-z1 <- unique(Z.band[,1]); z2 <- unique(Z.band[,2]); # Posiciones por separado
-n1 <- length(z1); n2 <- length(z2) # Longitud de dichas posiciones
-scc <- matrix(NA,n1*n2,2) # Se crea la matriz donde irá el valor de SCC para cada posicion
-ind.inside.band <- aa$ind.inside.cover # Solo las zonas cubiertas por la triangulacion
-scc[ind.inside.band,] <- aa$scc[,,2] # se asigna el SCC a esas zonas
-scc.limit <- c(min(scc[,1],na.rm=TRUE), max(scc[,2],na.rm=TRUE)) # Limites: minimo de la inferior y máximo de la superior
+## IMPORTANT NOTE: ESTIMATED MEAN FUNCTIONS APPEAR IN THE ORDER THEY APPEAR IN THE CODE (FIRST Ya THEN Yb)
+## BUT SCC IS ACTUALLY CALCULATED FOR THE DIFFERENCE BETWEEN Yb MINUS Ya
 
-scc.l.mtx <- matrix(scc[,1],nrow=n2,ncol=n1) # Lower SCC for each location. 
-scc.u.mtx <- matrix(scc[,2],nrow=n2,ncol=n1) # Upper SCC for each location.
-scc.l.mtx[scc.l.mtx<0]=NA # Los que cumplen lo esperable se ponen NA para no representarlos, solo los Lower SCC que son positivos se quedan
-scc.u.mtx[scc.u.mtx>0]=NA # Los que cumplen lo esperable se ponen NA para no representarlos, solo los Upper SCC que son negativos se quedan
-image.plot(z2,z1,scc.l.mtx, zlim = scc.limit) # Regiones en que la diferencia de medias es positiva (cae encima del 0), o sea, que la imagen 1 es más fuerte que la imagen 2 en esas áreas
-image.plot(z2,z1,scc.u.mtx, zlim = scc.limit) # Regiones en que la diferencia de medias es negativa (cae debajo del 0), o sea, que la imagen 2 es más fuerte que la imagen 1 en esas áreas
+    
+    # FIRST WAY OF VISUALIZATION:
 
-points.P<-which(scc.l.mtx>0,arr.ind=TRUE) # Puntos con diferencia de medias positiva (primera más fuerte)
-points.N<-which(scc.u.mtx<0,arr.ind=TRUE) # Puntos con diferencia de medias negativa (segunda más fuerte)
+    plot(SCC_COMP_1,
+         # breaks=c(0,2),
+         # col="turquoise",
+         breaks=seq(from=0,to=2,length.out = 65),
+         xlab="Longitudinal (1-95)",
+         ylab="Transversal (1-79)",
+         sub="Difference between estimated mean functions: CNs - ADs",
+         col.sub="red",
+         family ="serif")
 
-points(points.P,
-       type="p",
-       pch=".",
-       col="navy",
-       cex=9)  
-
-points(points.N,
-       type="p",
-       pch=".",
-       col="orange",
-       cex=9) 
-
-# Type: p,l,b,c,o,s,S,h,n
-# pch = 0:18 =:46
-# col=
-# bg= background
-# lwd= line width
+    # SECOND WAY: JUST ONE COLOR AND THEN WE OVERLAY A SERIES OF POINTS
+    # RUN THIS NEXT PLOT CODE, STOP IN ONE OF THE ESTIMATED MEAN FUNCTIONS, THEN RUN "POINTS" TO OVERLAY THEM
+    
+    plot(SCC_COMP_1,
+         breaks=c(0,2),
+         col="turquoise",
+         # breaks=seq(from=0,to=2,length.out = 65),
+         xlab="Longitudinal (1-95)",
+         ylab="Transversal (1-79)",
+         sub="Difference between estimated mean functions: CNs - ADs",
+         col.sub="red",
+         family ="serif")
 
 
+    
+my_points <- function(aa){
+  
+  Z.band <- matrix(aa$Z.band,ncol=2) # Positions
+  z1 <- unique(Z.band[,1]); z2 <- unique(Z.band[,2]); # Separated positions
+  n1 <- length(z1); n2 <- length(z2) # Lengths of those positions
+  scc <- matrix(NA,n1*n2,2) # Matrix with value of that SCC in that position
+  ind.inside.band <- aa$ind.inside.cover # Keep only regions inside triangulation
+  scc[ind.inside.band,] <- aa$scc[,,2] # Assign SCC to those areas
+  scc.limit <- c(min(scc[,1],na.rm=TRUE), max(scc[,2],na.rm=TRUE)) # LIMITS: minimum of inferior, maximum of superior
+  
+  scc.l.mtx <- matrix(scc[,1],nrow=n2,ncol=n1) # Lower SCC for each location. 
+  scc.u.mtx <- matrix(scc[,2],nrow=n2,ncol=n1) # Upper SCC for each location.
+  scc.l.mtx[scc.l.mtx<0]=NA # The ones that work just fine are substituded by a NA as we don't want to represent them, only positive LowerSCCs are represented
+  scc.u.mtx[scc.u.mtx>0]=NA # The ones that work just fine are substituded by a NA as we don't want to represent them, only positive UpperSCCs are represented
+  
+  points.P<-which(scc.l.mtx>0,arr.ind=TRUE) # Points where mean difference is positive (first image is stronger)
+  points.N<-which(scc.u.mtx<0,arr.ind=TRUE) # Points where mean difference is negative (second image is stronger)
+  
+  pointers<-list(points.P,points.N)
+  print(pointers)  
+}
 
+
+  # NOT NECESSARY TO RUN THESE TWO LINES
+  image.plot(z2,z1,scc.l.mtx, zlim = scc.limit) # Regions where the difference between mean functions is positive (falls above 0). That is, activity in Image1 is stronger than in Image 2 in that area
+  image.plot(z2,z1,scc.u.mtx, zlim = scc.limit) # Regions where the difference between mean functions is negative (falls below 0). That is, activity in Image2 is stronger than in Image 1 in that area 
+  #
+
+points_1 <- my_points(SCC_COMP_1) # Returns coordinates of points above or below estimated mean function (points.P,points.N; in that order)
+
+## SO NOW IF YOU GO BACK, PLOT THE SCC YOU NEED AND THEN RUN THE FOLLOWING LINES UPON IT, IT WILL DRAW THE POINTS WHICH ARE UP OR DOWN SCC
+
+  points(points_1[[1]],
+         type="p",
+         pch=15,
+         col="navy")  
+  
+  points(points_1[[2]],
+         type="p",
+         pch=15,
+         col="yellow") 
+
+    # Type: p,l,b,c,o,s,S,h,n
+    # pch = 0:18 =:46
+    # col=
+    # bg= background
+    # lwd= line width
+
+
+##############################//
+
+  
 SCC_COMP_2=scc.image(Ya=Y_CN,Yb=Y_AD,Z=Z,d.est=d.est,d.band=d.band,r=r,
                      V.est.a=V.est,Tr.est.a=Tr.est,
                      V.band.a=V.band,Tr.band.a=Tr.band,
                      penalty=TRUE,lambda=lambda,alpha.grid=alpha.grid,adjust.sigma=TRUE)    
 
 
-plot(SCC_COMP_2,
-     breaks=c(0,2),
-     col="turquoise",
-     #breaks=seq(from=0,to=2,length.out = 65),
-     xlab="Longitudinal (1-95)",
-     ylab="Transversal (1-79)",
-     sub="Difference between estimated mean functions: CNs - ADs",
-     col.sub="red",
-     family ="serif")
+  plot(SCC_COMP_2, # Comment args 1&2 and uncoment arg 3 to change visualization
+       breaks=c(0,2),  
+       col="turquoise",
+       #breaks=seq(from=0,to=2,length.out = 65),
+       xlab="Longitudinal (1-95)",
+       ylab="Transversal (1-79)",
+       sub="Difference between estimated mean functions: CNs - ADs",
+       col.sub="red",
+       family ="serif")
 
 
-# Si haces la diferencia de medias y no hay diferencias significativas, 
-# el cero (0) tiene que estar incluido en los intervalos propuestos, indicando 
-# que la diferencia es pequeña y que bien podr�???a no ser ninguna diferencia en absoluto. 
-# En cambio, si en el intervalo de confianza inferior hay valores superiores a 0, esto 
-# indica que en esa ubicación (en ese pixel/voxel) el intervalo de confianza está por 
-# encima del 0 (0 cae debajo) y que forzosamente en ese punto el valor será superior al 
-# esperable por una diferencia de medias de imagenes 'iguales', o sea que el valor en la 
-# primera imagen era más alto que en la segunda. De la misma forma, en el intervalo de 
-# confianza superior pueden aparecer valores inferiores a cero (0) que indican que el 
-# cero va a caer encima del intervalo de confianza, indicando que el valor real en ese 
-# pixel/voxel es inferior al esperable por la diferencia de dos imagenes 'iguales' y que 
-# en la diferencia entre medias, la segunda imagen era más potente o con valores más altos 
-# en esa posición.
-
-
-aa=SCC_COMP_2
-
-Z.band <- matrix(aa$Z.band,ncol=2) # Posiciones
-z1 <- unique(Z.band[,1]); z2 <- unique(Z.band[,2]); # Posiciones por separado
-n1 <- length(z1); n2 <- length(z2) # Longitud de dichas posiciones
-scc <- matrix(NA,n1*n2,2) # Se crea la matriz donde irá el valor de SCC para cada posicion
-ind.inside.band <- aa$ind.inside.cover # Solo las zonas cubiertas por la triangulacion
-scc[ind.inside.band,] <- aa$scc[,,2] # se asigna el SCC a esas zonas
-scc.limit <- c(min(scc[,1],na.rm=TRUE), max(scc[,2],na.rm=TRUE)) # Limites: minimo de la inferior y máximo de la superior
-
-scc.l.mtx <- matrix(scc[,1],nrow=n2,ncol=n1) # Lower SCC for each location. 
-scc.u.mtx <- matrix(scc[,2],nrow=n2,ncol=n1) # Upper SCC for each location.
-scc.l.mtx[scc.l.mtx<0]=NA # Los que cumplen lo esperable se ponen NA para no representarlos, solo los Lower SCC que son positivos se quedan
-scc.u.mtx[scc.u.mtx>0]=NA # Los que cumplen lo esperable se ponen NA para no representarlos, solo los Upper SCC que son negativos se quedan
-image.plot(z2,z1,scc.l.mtx, zlim = scc.limit) # Regiones en que la diferencia de medias es positiva (cae encima del 0), o sea, que la imagen 1 es más fuerte que la imagen 2 en esas áreas
-image.plot(z2,z1,scc.u.mtx, zlim = scc.limit) # Regiones en que la diferencia de medias es negativa (cae debajo del 0), o sea, que la imagen 2 es más fuerte que la imagen 1 en esas áreas
-
-points.P<-which(scc.l.mtx>0,arr.ind=TRUE) # Puntos con diferencia de medias positiva (primera más fuerte)
-points.N<-which(scc.u.mtx<0,arr.ind=TRUE) # Puntos con diferencia de medias negativa (segunda más fuerte)
-
-points(points.P,
-       type="p",
-       pch=2,
-       col="yellow")  
-
-points(points.N,
-       type="p",
-       pch=2,
-       col="navy") 
-
-# Type: p,l,b,c,o,s,S,h,n
-# pch = 0:18 =:46
-# col=
-# bg= background
-# lwd= line width
-
+  points_2 <- my_points(SCC_COMP_2) # Returns coordinates of points above or below estimated mean function (points.P,points.N; in that order)
+  
+  ## SO NOW IF YOU GO BACK, PLOT THE SCC YOU NEED AND THEN RUN THE FOLLOWING LINES UPON IT, IT WILL DRAW THE POINTS WHICH ARE UP OR DOWN SCC
+  
+      points(points_1[[1]],
+             type="p",
+             pch=15,
+             col="navy")  
+      
+      points(points_1[[2]],
+             type="p",
+             pch=15,
+             col="yellow") 
+    
+      # Type: p,l,b,c,o,s,S,h,n
+      # pch = 0:18 =:46
+      # col=
+      # bg= background
+      # lwd= line width
 
 
 
@@ -837,58 +837,40 @@ SCC_COMP_MF1=scc.image(Ya=Y_F,Yb=Y_M,Z=Z,d.est=d.est,d.band=d.band,r=r,
                        penalty=TRUE,lambda=lambda,alpha.grid=alpha.grid,adjust.sigma=TRUE)    
 
 
-plot(SCC_COMP_MF1,
-     breaks=c(0,2),
-     col="turquoise",
-     # breaks=seq(from=0,to=2,length.out = 65),
-     # col=,
-     xlab="Longitudinal (1-95)",
-     ylab="Transversal (1-79)",
-     sub="Difference between AD estimated mean functions for: Male AD - Female AD",
-     col.sub="red",
-     family ="serif")
+  plot(SCC_COMP_MF1,
+       breaks=c(0,2),
+       col="turquoise",
+       # breaks=seq(from=0,to=2,length.out = 65),
+       # col=,
+       xlab="Longitudinal (1-95)",
+       ylab="Transversal (1-79)",
+       sub="Difference between AD estimated mean functions for: Male AD - Female AD",
+       col.sub="red",
+       family ="serif")
 
 
-aa=SCC_COMP_MF1
+    points_MF1 <- my_points(SCC_COMP_MF1) # Returns coordinates of points above or below estimated mean function (points.P,points.N; in that order)
+      
+        ## SO NOW IF YOU GO BACK, PLOT THE SCC YOU NEED AND THEN RUN THE FOLLOWING LINES UPON IT, IT WILL DRAW THE POINTS WHICH ARE UP OR DOWN SCC
+        
+        points(points_MF1[[1]],
+               type="p",
+               pch=15,
+               col="navy")  
+        
+        points(points_MF1[[2]],
+               type="p",
+               pch=15,
+               col="yellow") 
+        
+        # Type: p,l,b,c,o,s,S,h,n
+        # pch = 0:18 =:46
+        # col=
+        # bg= background
+        # lwd= line width
 
-Z.band <- matrix(aa$Z.band,ncol=2) # Posiciones
-z1 <- unique(Z.band[,1]); z2 <- unique(Z.band[,2]); # Posiciones por separado
-n1 <- length(z1); n2 <- length(z2) # Longitud de dichas posiciones
-scc <- matrix(NA,n1*n2,2) # Se crea la matriz donde irá el valor de SCC para cada posicion
-ind.inside.band <- aa$ind.inside.cover # Solo las zonas cubiertas por la triangulacion
-scc[ind.inside.band,] <- aa$scc[,,2] # se asigna el SCC a esas zonas
-scc.limit <- c(min(scc[,1],na.rm=TRUE), max(scc[,2],na.rm=TRUE)) # Limites: minimo de la inferior y máximo de la superior
 
-scc.l.mtx <- matrix(scc[,1],nrow=n2,ncol=n1) # Lower SCC for each location. 
-scc.u.mtx <- matrix(scc[,2],nrow=n2,ncol=n1) # Upper SCC for each location.
-scc.l.mtx[scc.l.mtx<0]=NA # Los que cumplen lo esperable se ponen NA para no representarlos, solo los Lower SCC que son positivos se quedan
-scc.u.mtx[scc.u.mtx>0]=NA # Los que cumplen lo esperable se ponen NA para no representarlos, solo los Upper SCC que son negativos se quedan
-
-image.plot(z2,z1,scc.l.mtx, zlim = scc.limit) # Regiones en que la diferencia de medias es positiva (cae encima del 0), o sea, que la imagen 1 es más fuerte que la imagen 2 en esas áreas
-image.plot(z2,z1,scc.u.mtx, zlim = scc.limit) # Regiones en que la diferencia de medias es negativa (cae debajo del 0), o sea, que la imagen 2 es más fuerte que la imagen 1 en esas áreas
-
-points.P<-which(scc.l.mtx>0,arr.ind=TRUE) # Puntos con diferencia de medias positiva (primera más fuerte)
-points.N<-which(scc.u.mtx<0,arr.ind=TRUE) # Puntos con diferencia de medias negativa (segunda más fuerte)
-
-
-points(points.P,
-       type="p",
-       pch=".",
-       col="navy",
-       cex=9)  
-
-points(points.N,
-       type="p",
-       pch=".",
-       col="orange",
-       cex=9)
-
-# Type: p,l,b,c,o,s,S,h,n
-# pch = 0:18 =:46
-# col=
-# bg= background
-# lwd= line width
-
+##############################//
 
 SCC_COMP_MF2=scc.image(Ya=Y_M,Yb=Y_F,Z=Z,d.est=d.est,d.band=d.band,r=r,
                        V.est.a=V.est,Tr.est.a=Tr.est,
@@ -896,56 +878,41 @@ SCC_COMP_MF2=scc.image(Ya=Y_M,Yb=Y_F,Z=Z,d.est=d.est,d.band=d.band,r=r,
                        penalty=TRUE,lambda=lambda,alpha.grid=alpha.grid,adjust.sigma=TRUE)    
 
 
-plot(SCC_COMP_MF2,
-     breaks=c(0,2),
-     col="turquoise",
-     #breaks=seq(from=0,to=2,length.out = 65),
-     xlab="Longitudinal (1-95)",
-     ylab="Transversal (1-79)",
-     sub="Difference between AD estimated mean functions for: Male AD - Female AD",
-     col.sub="red",
-     family ="serif")
+    plot(SCC_COMP_MF2,
+         breaks=c(0,2),
+         col="turquoise",
+         #breaks=seq(from=0,to=2,length.out = 65),
+         xlab="Longitudinal (1-95)",
+         ylab="Transversal (1-79)",
+         sub="Difference between AD estimated mean functions for: Male AD - Female AD",
+         col.sub="red",
+         family ="serif")
 
 
-aa=SCC_COMP_MF2
-
-Z.band <- matrix(aa$Z.band,ncol=2) # Posiciones
-z1 <- unique(Z.band[,1]); z2 <- unique(Z.band[,2]); # Posiciones por separado
-n1 <- length(z1); n2 <- length(z2) # Longitud de dichas posiciones
-scc <- matrix(NA,n1*n2,2) # Se crea la matriz donde irá el valor de SCC para cada posicion
-ind.inside.band <- aa$ind.inside.cover # Solo las zonas cubiertas por la triangulacion
-scc[ind.inside.band,] <- aa$scc[,,2] # se asigna el SCC a esas zonas
-scc.limit <- c(min(scc[,1],na.rm=TRUE), max(scc[,2],na.rm=TRUE)) # Limites: minimo de la inferior y máximo de la superior
-
-scc.l.mtx <- matrix(scc[,1],nrow=n2,ncol=n1) # Lower SCC for each location. 
-scc.u.mtx <- matrix(scc[,2],nrow=n2,ncol=n1) # Upper SCC for each location.
-scc.l.mtx[scc.l.mtx<0]=NA # Los que cumplen lo esperable se ponen NA para no representarlos, solo los Lower SCC que son positivos se quedan
-scc.u.mtx[scc.u.mtx>0]=NA # Los que cumplen lo esperable se ponen NA para no representarlos, solo los Upper SCC que son negativos se quedan
-
-image.plot(z2,z1,scc.l.mtx, zlim = scc.limit) # Regiones en que la diferencia de medias es positiva (cae encima del 0), o sea, que la imagen 1 es más fuerte que la imagen 2 en esas áreas
-image.plot(z2,z1,scc.u.mtx, zlim = scc.limit) # Regiones en que la diferencia de medias es negativa (cae debajo del 0), o sea, que la imagen 2 es más fuerte que la imagen 1 en esas áreas
-
-points.P<-which(scc.l.mtx>0,arr.ind=TRUE) # Puntos con diferencia de medias positiva (primera más fuerte)
-points.N<-which(scc.u.mtx<0,arr.ind=TRUE) # Puntos con diferencia de medias negativa (segunda más fuerte)
-
-points(points.P,
-       type="p",
-       pch=2,
-       col="yellow")  
-
-points(points.N,
-       type="p",
-       pch=2,
-       col="orange") 
-
-# Type: p,l,b,c,o,s,S,h,n
-# pch = 0:18 =:46
-# col=
-# bg= background
-# lwd= line width
-
+     points_MF2 <- my_points(SCC_COMP_MF2) # Returns coordinates of points above or below estimated mean function (points.P,points.N; in that order)
+    
+          ## SO NOW IF YOU GO BACK, PLOT THE SCC YOU NEED AND THEN RUN THE FOLLOWING LINES UPON IT, IT WILL DRAW THE POINTS WHICH ARE UP OR DOWN SCC
+          
+          points(points_MF2[[1]],
+                 type="p",
+                 pch=15,
+                 col="navy")  
+          
+          points(points_MF2[[2]],
+                 type="p",
+                 pch=15,
+                 col="yellow") 
+          
+          # Type: p,l,b,c,o,s,S,h,n
+          # pch = 0:18 =:46
+          # col=
+          # bg= background
+          # lwd= line width
+    
+    
+          
 ################################################################################/
-#   AND NOW FOR A COMPARATION BETWEEN AD male AND CN male AND SAME FOR female
+#   AND NOW FOR A COMPARATION BETWEEN AD male AND CN male AND SAME FOR FEMALE
 ################################################################################/
 
 
@@ -955,55 +922,40 @@ SCC_COMP_M_ADCN=scc.image(Ya=Y_CN_M,Yb=Y_AD_M,Z=Z,d.est=d.est,d.band=d.band,r=r,
                           V.band.a=V.band,Tr.band.a=Tr.band,
                           penalty=TRUE,lambda=lambda,alpha.grid=alpha.grid,adjust.sigma=TRUE)    
 
+    
+    plot(SCC_COMP_M_ADCN,
+         breaks=c(0,2),
+         col="turquoise",
+         # breaks=seq(from=0,to=2,length.out = 65),
+         xlab="Longitudinal (1-95)",
+         ylab="Transversal (1-79)",
+         sub="Difference between Control males and Alzheimer males.",
+         col.sub="red",
+         family ="serif")
 
-plot(SCC_COMP_M_ADCN,
-     breaks=c(0,2),
-     col="turquoise",
-     # breaks=seq(from=0,to=2,length.out = 65),
-     xlab="Longitudinal (1-95)",
-     ylab="Transversal (1-79)",
-     sub="Difference between Control males and Alzheimer males.",
-     col.sub="red",
-     family ="serif")
+    
+    points_M_ADCN <- my_points(SCC_COMP_M_ADCN) # Returns coordinates of points above or below estimated mean function (points.P,points.N; in that order)
 
-aa=SCC_COMP_M_ADCN
+        ## SO NOW IF YOU GO BACK, PLOT THE SCC YOU NEED AND THEN RUN THE FOLLOWING LINES UPON IT, IT WILL DRAW THE POINTS WHICH ARE UP OR DOWN SCC
+        
+        points(points_M_ADCN[[1]],
+               type="p",
+               pch=15,
+               col="navy")  
+        
+        points(points_M_ADCN[[2]],
+               type="p",
+               pch=15,
+               col="yellow") 
+        
+        # Type: p,l,b,c,o,s,S,h,n
+        # pch = 0:18 =:46
+        # col=
+        # bg= background
+        # lwd= line width
 
-Z.band <- matrix(aa$Z.band,ncol=2) # Posiciones
-z1 <- unique(Z.band[,1]); z2 <- unique(Z.band[,2]); # Posiciones por separado
-n1 <- length(z1); n2 <- length(z2) # Longitud de dichas posiciones
-scc <- matrix(NA,n1*n2,2) # Se crea la matriz donde irá el valor de SCC para cada posicion
-ind.inside.band <- aa$ind.inside.cover # Solo las zonas cubiertas por la triangulacion
-scc[ind.inside.band,] <- aa$scc[,,2] # se asigna el SCC a esas zonas
-scc.limit <- c(min(scc[,1],na.rm=TRUE), max(scc[,2],na.rm=TRUE)) # Limites: minimo de la inferior y máximo de la superior
 
-scc.l.mtx <- matrix(scc[,1],nrow=n2,ncol=n1) # Lower SCC for each location. 
-scc.u.mtx <- matrix(scc[,2],nrow=n2,ncol=n1) # Upper SCC for each location.
-scc.l.mtx[scc.l.mtx<0]=NA # Los que cumplen lo esperable se ponen NA para no representarlos, solo los Lower SCC que son positivos se quedan
-scc.u.mtx[scc.u.mtx>0]=NA # Los que cumplen lo esperable se ponen NA para no representarlos, solo los Upper SCC que son negativos se quedan
-
-image.plot(z2,z1,scc.l.mtx, zlim = scc.limit) # Regiones en que la diferencia de medias es positiva (cae encima del 0), o sea, que la imagen 1 es más fuerte que la imagen 2 en esas áreas
-image.plot(z2,z1,scc.u.mtx, zlim = scc.limit) # Regiones en que la diferencia de medias es negativa (cae debajo del 0), o sea, que la imagen 2 es más fuerte que la imagen 1 en esas áreas
-
-points.P<-which(scc.l.mtx>0,arr.ind=TRUE) # Puntos con diferencia de medias positiva (primera más fuerte)
-points.N<-which(scc.u.mtx<0,arr.ind=TRUE) # Puntos con diferencia de medias negativa (segunda más fuerte)
-
-points(points.P,
-       type="p",
-       pch=".",
-       col="orange",
-       cex=9)  
-
-points(points.N,
-       type="p",
-       pch=".",
-       col="navy",
-       cex=9)
-
-# Type: p,l,b,c,o,s,S,h,n
-# pch = 0:18 =:46
-# col=
-# bg= background
-# lwd= line width
+#########/
 
 
 SCC_COMP_F_ADCN=scc.image(Ya=Y_CN_F,Yb=Y_AD_F,Z=Z,d.est=d.est,d.band=d.band,r=r,
@@ -1012,113 +964,86 @@ SCC_COMP_F_ADCN=scc.image(Ya=Y_CN_F,Yb=Y_AD_F,Z=Z,d.est=d.est,d.band=d.band,r=r,
                           penalty=TRUE,lambda=lambda,alpha.grid=alpha.grid,adjust.sigma=TRUE)    
 
 
-plot(SCC_COMP_F_ADCN,
-     breaks=c(0,2),
-     col="turquoise",
-     # breaks=seq(from=0,to=2,length.out = 65),
-     xlab="Longitudinal (1-95)",
-     ylab="Transversal (1-79)",
-     sub="Difference between Control females and Alzheimer females",
-     col.sub="red",
-     family ="serif")
+  plot(SCC_COMP_F_ADCN,
+       breaks=c(0,2),
+       col="turquoise",
+       # breaks=seq(from=0,to=2,length.out = 65),
+       xlab="Longitudinal (1-95)",
+       ylab="Transversal (1-79)",
+       sub="Difference between Control females and Alzheimer females",
+       col.sub="red",
+       family ="serif")
 
-aa=SCC_COMP_F_ADCN
-
-Z.band <- matrix(aa$Z.band,ncol=2) # Posiciones
-z1 <- unique(Z.band[,1]); z2 <- unique(Z.band[,2]); # Posiciones por separado
-n1 <- length(z1); n2 <- length(z2) # Longitud de dichas posiciones
-scc <- matrix(NA,n1*n2,2) # Se crea la matriz donde irá el valor de SCC para cada posicion
-ind.inside.band <- aa$ind.inside.cover # Solo las zonas cubiertas por la triangulacion
-scc[ind.inside.band,] <- aa$scc[,,2] # se asigna el SCC a esas zonas
-scc.limit <- c(min(scc[,1],na.rm=TRUE), max(scc[,2],na.rm=TRUE)) # Limites: minimo de la inferior y máximo de la superior
-
-scc.l.mtx <- matrix(scc[,1],nrow=n2,ncol=n1) # Lower SCC for each location. 
-scc.u.mtx <- matrix(scc[,2],nrow=n2,ncol=n1) # Upper SCC for each location.
-scc.l.mtx[scc.l.mtx<0]=NA # Los que cumplen lo esperable se ponen NA para no representarlos, solo los Lower SCC que son positivos se quedan
-scc.u.mtx[scc.u.mtx>0]=NA # Los que cumplen lo esperable se ponen NA para no representarlos, solo los Upper SCC que son negativos se quedan
-
-image.plot(z2,z1,scc.l.mtx, zlim = scc.limit) # Regiones en que la diferencia de medias es positiva (cae encima del 0), o sea, que la imagen 1 es más fuerte que la imagen 2 en esas áreas
-image.plot(z2,z1,scc.u.mtx, zlim = scc.limit) # Regiones en que la diferencia de medias es negativa (cae debajo del 0), o sea, que la imagen 2 es más fuerte que la imagen 1 en esas áreas
-
-points.P<-which(scc.l.mtx>0,arr.ind=TRUE) # Puntos con diferencia de medias positiva (primera más fuerte)
-points.N<-which(scc.u.mtx<0,arr.ind=TRUE) # Puntos con diferencia de medias negativa (segunda más fuerte)
-
-points(points.P,
-       type="p",
-       pch=".",
-       col="orange",
-       cex=9)  
-
-points(points.N,
-       type="p",
-       pch=".",
-       col="navy",
-       cex=9) 
-
-# Type: p,l,b,c,o,s,S,h,n
-# pch = 0:18 =:46
-# col=
-# bg= background
-# lwd= line width
-
-#############################/
+  
+      points_F_ADCN <- my_points(SCC_COMP_F_ADCN) # Returns coordinates of points above or below estimated mean function (points.P,points.N; in that order)
+      
+      ## SO NOW IF YOU GO BACK, PLOT THE SCC YOU NEED AND THEN RUN THE FOLLOWING LINES UPON IT, IT WILL DRAW THE POINTS WHICH ARE UP OR DOWN SCC
+      
+      points(points_F_ADCN[[1]],
+             type="p",
+             pch=15,
+             col="navy")  
+      
+      points(points_F_ADCN[[2]],
+             type="p",
+             pch=15,
+             col="yellow") 
+      
+      # Type: p,l,b,c,o,s,S,h,n
+      # pch = 0:18 =:46
+      # col=
+      # bg= background
+      # lwd= line width
+      
+  
+################################################################################/
+#   AND NOW FOR A COMPARATION BETWEEN AD AND CN FILTERING BY AGE BLOCK
+################################################################################/
 
 
+# CN VS AD <75
+      
 SCC_COMP_LESS_75=scc.image(Ya=Y_AD_L_75,Yb=Y_CN_L_75,Z=Z,d.est=d.est,d.band=d.band,r=r,
                            V.est.a=V.est,Tr.est.a=Tr.est,
                            V.band.a=V.band,Tr.band.a=Tr.band,
                            penalty=TRUE,lambda=lambda,alpha.grid=alpha.grid,adjust.sigma=TRUE)    
 
 
-plot(SCC_COMP_LESS_75,
-     # breaks=c(0,2),
-     # col="turquoise",
-     breaks=seq(from=0,to=2,length.out = 65),
-     xlab="Longitudinal (1-95)",
-     ylab="Transversal (1-79)",
-     sub="Difference between Control and Alzheimer for <75 y.o. patients",
-     col.sub="red",
-     family ="serif")
+  plot(SCC_COMP_LESS_75,
+       # breaks=c(0,2),
+       # col="turquoise",
+       breaks=seq(from=0,to=2,length.out = 65),
+       xlab="Longitudinal (1-95)",
+       ylab="Transversal (1-79)",
+       sub="Difference between Control and Alzheimer for <75 y.o. patients",
+       col.sub="red",
+       family ="serif")
 
-aa=SCC_COMP_LESS_75
+  
+      points_LESS_75 <- my_points(SCC_COMP_LESS_75) # Returns coordinates of points above or below estimated mean function (points.P,points.N; in that order)
+      
+      ## SO NOW IF YOU GO BACK, PLOT THE SCC YOU NEED AND THEN RUN THE FOLLOWING LINES UPON IT, IT WILL DRAW THE POINTS WHICH ARE UP OR DOWN SCC
+      
+      points(points_LESS_75[[1]],
+             type="p",
+             pch=15,
+             col="navy")  
+      
+      points(points_LESS_75[[2]],
+             type="p",
+             pch=15,
+             col="yellow") 
+      
+      # Type: p,l,b,c,o,s,S,h,n
+      # pch = 0:18 =:46
+      # col=
+      # bg= background
+      # lwd= line width
 
-Z.band <- matrix(aa$Z.band,ncol=2) # Posiciones
-z1 <- unique(Z.band[,1]); z2 <- unique(Z.band[,2]); # Posiciones por separado
-n1 <- length(z1); n2 <- length(z2) # Longitud de dichas posiciones
-scc <- matrix(NA,n1*n2,2) # Se crea la matriz donde irá el valor de SCC para cada posicion
-ind.inside.band <- aa$ind.inside.cover # Solo las zonas cubiertas por la triangulacion
-scc[ind.inside.band,] <- aa$scc[,,2] # se asigna el SCC a esas zonas
-scc.limit <- c(min(scc[,1],na.rm=TRUE), max(scc[,2],na.rm=TRUE)) # Limites: minimo de la inferior y máximo de la superior
 
-scc.l.mtx <- matrix(scc[,1],nrow=n2,ncol=n1) # Lower SCC for each location. 
-scc.u.mtx <- matrix(scc[,2],nrow=n2,ncol=n1) # Upper SCC for each location.
-scc.l.mtx[scc.l.mtx<0]=NA # Los que cumplen lo esperable se ponen NA para no representarlos, solo los Lower SCC que son positivos se quedan
-scc.u.mtx[scc.u.mtx>0]=NA # Los que cumplen lo esperable se ponen NA para no representarlos, solo los Upper SCC que son negativos se quedan
+#########################/
 
-image.plot(z2,z1,scc.l.mtx, zlim = scc.limit) # Regiones en que la diferencia de medias es positiva (cae encima del 0), o sea, que la imagen 1 es más fuerte que la imagen 2 en esas áreas
-image.plot(z2,z1,scc.u.mtx, zlim = scc.limit) # Regiones en que la diferencia de medias es negativa (cae debajo del 0), o sea, que la imagen 2 es más fuerte que la imagen 1 en esas áreas
-
-points.P<-which(scc.l.mtx>0,arr.ind=TRUE) # Puntos con diferencia de medias positiva (primera más fuerte)
-points.N<-which(scc.u.mtx<0,arr.ind=TRUE) # Puntos con diferencia de medias negativa (segunda más fuerte)
-
-points(points.P,
-       type="p",
-       pch=".",
-       col="navy",
-       cex=9)  
-
-points(points.N,
-       type="p",
-       pch=".",
-       col="orange",
-       cex=9) 
-
-# Type: p,l,b,c,o,s,S,h,n
-# pch = 0:18 =:46
-# col=
-# bg= background
-# lwd= line width
-
+# ONLY MALES <75
 
 SCC_COMP_MORE_75=scc.image(Ya=Y_AD_M_75,Yb=Y_CN_M_75,Z=Z,d.est=d.est,d.band=d.band,r=r,
                            V.est.a=V.est,Tr.est.a=Tr.est,
@@ -1127,59 +1052,43 @@ SCC_COMP_MORE_75=scc.image(Ya=Y_AD_M_75,Yb=Y_CN_M_75,Z=Z,d.est=d.est,d.band=d.ba
 
 
 
-plot(SCC_COMP_MORE_75,
-     # breaks=c(0,2),
-     # col="turquoise",
-     breaks=seq(from=0,to=2,length.out = 65),
-     xlab="Longitudinal (1-95)",
-     ylab="Transversal (1-79)",
-     sub="Difference between Control and Alzheimer for >75 y.o. patients",
-     col.sub="red",
-     family ="serif")
+    plot(SCC_COMP_MORE_75,
+         # breaks=c(0,2),
+         # col="turquoise",
+         breaks=seq(from=0,to=2,length.out = 65),
+         xlab="Longitudinal (1-95)",
+         ylab="Transversal (1-79)",
+         sub="Difference between Control and Alzheimer for >75 y.o. patients",
+         col.sub="red",
+         family ="serif")
 
-aa=SCC_COMP_MORE_75
+  
+        points_MORE_75 <- my_points(SCC_COMP_MORE_75) # Returns coordinates of points above or below estimated mean function (points.P,points.N; in that order)
+    
+        ## SO NOW IF YOU GO BACK, PLOT THE SCC YOU NEED AND THEN RUN THE FOLLOWING LINES UPON IT, IT WILL DRAW THE POINTS WHICH ARE UP OR DOWN SCC
+        
+        points(points_MORE_75[[1]],
+               type="p",
+               pch=15,
+               col="navy")  
+        
+        points(points_MORE_75[[2]],
+               type="p",
+               pch=15,
+               col="yellow") 
+        
+        # Type: p,l,b,c,o,s,S,h,n
+        # pch = 0:18 =:46
+        # col=
+        # bg= background
+        # lwd= line width
 
-Z.band <- matrix(aa$Z.band,ncol=2) # Posiciones
-z1 <- unique(Z.band[,1]); z2 <- unique(Z.band[,2]); # Posiciones por separado
-n1 <- length(z1); n2 <- length(z2) # Longitud de dichas posiciones
-scc <- matrix(NA,n1*n2,2) # Se crea la matriz donde irá el valor de SCC para cada posicion
-ind.inside.band <- aa$ind.inside.cover # Solo las zonas cubiertas por la triangulacion
-scc[ind.inside.band,] <- aa$scc[,,2] # se asigna el SCC a esas zonas
-scc.limit <- c(min(scc[,1],na.rm=TRUE), max(scc[,2],na.rm=TRUE)) # Limites: minimo de la inferior y máximo de la superior
-
-scc.l.mtx <- matrix(scc[,1],nrow=n2,ncol=n1) # Lower SCC for each location. 
-scc.u.mtx <- matrix(scc[,2],nrow=n2,ncol=n1) # Upper SCC for each location.
-scc.l.mtx[scc.l.mtx<0]=NA # Los que cumplen lo esperable se ponen NA para no representarlos, solo los Lower SCC que son positivos se quedan
-scc.u.mtx[scc.u.mtx>0]=NA # Los que cumplen lo esperable se ponen NA para no representarlos, solo los Upper SCC que son negativos se quedan
-
-image.plot(z2,z1,scc.l.mtx, zlim = scc.limit) # Regiones en que la diferencia de medias es positiva (cae encima del 0), o sea, que la imagen 1 es más fuerte que la imagen 2 en esas áreas
-image.plot(z2,z1,scc.u.mtx, zlim = scc.limit) # Regiones en que la diferencia de medias es negativa (cae debajo del 0), o sea, que la imagen 2 es más fuerte que la imagen 1 en esas áreas
-
-points.P<-which(scc.l.mtx>0,arr.ind=TRUE) # Puntos con diferencia de medias positiva (primera más fuerte)
-points.N<-which(scc.u.mtx<0,arr.ind=TRUE) # Puntos con diferencia de medias negativa (segunda más fuerte)
-
-points(points.P,
-       type="p",
-       pch=".",
-       col="navy",
-       cex=9)  
-
-points(points.N,
-       type="p",
-       pch=".",
-       col="orange",
-       cex=9) 
-
-# Type: p,l,b,c,o,s,S,h,n
-# pch = 0:18 =:46
-# col=
-# bg= background
-# lwd= line width
-
-
+        
 
 #############################    /
 
+        
+# COMPARING AD'S IN DIFFERENT AGE BLOCKS        
 
 SCC_COMP_ADS_AGE=scc.image(Ya=Y_AD_M_75,Yb=Y_AD_L_75,Z=Z,d.est=d.est,d.band=d.band,r=r,
                            V.est.a=V.est,Tr.est.a=Tr.est,
@@ -1188,124 +1097,86 @@ SCC_COMP_ADS_AGE=scc.image(Ya=Y_AD_M_75,Yb=Y_AD_L_75,Z=Z,d.est=d.est,d.band=d.ba
 
 
 
-plot(SCC_COMP_ADS_AGE,
-     breaks=c(0,2),
-     col="turquoise",
-     # breaks=seq(from=0,to=2,length.out = 65),
-     xlab="Longitudinal (1-95)",
-     ylab="Transversal (1-79)",
-     sub="Difference between Control and Alzheimer for >75 y.o. patients",
-     col.sub="red",
-     family ="serif")
+  plot(SCC_COMP_ADS_AGE,
+       breaks=c(0,2),
+       col="turquoise",
+       # breaks=seq(from=0,to=2,length.out = 65),
+       xlab="Longitudinal (1-95)",
+       ylab="Transversal (1-79)",
+       sub="Difference between Control and Alzheimer for >75 y.o. patients",
+       col.sub="red",
+       family ="serif")
 
-aa=SCC_COMP_ADS_AGE
-
-Z.band <- matrix(aa$Z.band,ncol=2) # Posiciones
-z1 <- unique(Z.band[,1]); z2 <- unique(Z.band[,2]); # Posiciones por separado
-n1 <- length(z1); n2 <- length(z2) # Longitud de dichas posiciones
-scc <- matrix(NA,n1*n2,2) # Se crea la matriz donde irá el valor de SCC para cada posicion
-ind.inside.band <- aa$ind.inside.cover # Solo las zonas cubiertas por la triangulacion
-scc[ind.inside.band,] <- aa$scc[,,2] # se asigna el SCC a esas zonas
-scc.limit <- c(min(scc[,1],na.rm=TRUE), max(scc[,2],na.rm=TRUE)) # Limites: minimo de la inferior y máximo de la superior
-
-scc.l.mtx <- matrix(scc[,1],nrow=n2,ncol=n1) # Lower SCC for each location. 
-scc.u.mtx <- matrix(scc[,2],nrow=n2,ncol=n1) # Upper SCC for each location.
-scc.l.mtx[scc.l.mtx<0]=NA # Los que cumplen lo esperable se ponen NA para no representarlos, solo los Lower SCC que son positivos se quedan
-scc.u.mtx[scc.u.mtx>0]=NA # Los que cumplen lo esperable se ponen NA para no representarlos, solo los Upper SCC que son negativos se quedan
-
-image.plot(z2,z1,scc.l.mtx, zlim = scc.limit) # Regiones en que la diferencia de medias es positiva (cae encima del 0), o sea, que la imagen 1 es más fuerte que la imagen 2 en esas áreas
-image.plot(z2,z1,scc.u.mtx, zlim = scc.limit) # Regiones en que la diferencia de medias es negativa (cae debajo del 0), o sea, que la imagen 2 es más fuerte que la imagen 1 en esas áreas
-
-points.P<-which(scc.l.mtx>0,arr.ind=TRUE) # Puntos con diferencia de medias positiva (primera más fuerte)
-points.N<-which(scc.u.mtx<0,arr.ind=TRUE) # Puntos con diferencia de medias negativa (segunda más fuerte)
-
-points(points.P,
-       type="p",
-       pch=".",
-       col="navy",
-       cex=9)  
-
-points(points.N,
-       type="p",
-       pch=".",
-       col="orange",
-       cex=9) 
-
-# Type: p,l,b,c,o,s,S,h,n
-# pch = 0:18 =:46
-# col=
-# bg= background
-# lwd= line width
+  
+      points_ADS_AGE <- my_points(SCC_COMP_ADS_AGE) # Returns coordinates of points above or below estimated mean function (points.P,points.N; in that order)
+      
+      ## SO NOW IF YOU GO BACK, PLOT THE SCC YOU NEED AND THEN RUN THE FOLLOWING LINES UPON IT, IT WILL DRAW THE POINTS WHICH ARE UP OR DOWN SCC
+      
+      points(points_ADS_AGE[[1]],
+             type="p",
+             pch=15,
+             col="navy")  
+      
+      points(points_ADS_AGE[[2]],
+             type="p",
+             pch=15,
+             col="yellow") 
+      
+      # Type: p,l,b,c,o,s,S,h,n
+      # pch = 0:18 =:46
+      # col=
+      # bg= background
+      # lwd= line width
 
 
 ##################/          
 
 
+# COMPARING CN'S OF DIFFERENT AGE BLOCKS
 
 SCC_COMP_CNS_AGE=scc.image(Ya=Y_CN_M_75,Yb=Y_CN_L_75,Z=Z,d.est=d.est,d.band=d.band,r=r,
                            V.est.a=V.est,Tr.est.a=Tr.est,
                            V.band.a=V.band,Tr.band.a=Tr.band,
                            penalty=TRUE,lambda=lambda,alpha.grid=alpha.grid,adjust.sigma=TRUE)    
 
+  
+  plot(SCC_COMP_CNS_AGE,
+       # breaks=c(0,2),
+       # col="turquoise",
+       breaks=seq(from=0,to=2,length.out = 65),
+       xlab="Longitudinal (1-95)",
+       ylab="Transversal (1-79)",
+       sub="Difference between Control and Alzheimer for >75 y.o. patients",
+       col.sub="red",
+       family ="serif")
 
-
-plot(SCC_COMP_CNS_AGE,
-     # breaks=c(0,2),
-     # col="turquoise",
-     breaks=seq(from=0,to=2,length.out = 65),
-     xlab="Longitudinal (1-95)",
-     ylab="Transversal (1-79)",
-     sub="Difference between Control and Alzheimer for >75 y.o. patients",
-     col.sub="red",
-     family ="serif")
-
-aa=SCC_COMP_CNS_AGE
-
-Z.band <- matrix(aa$Z.band,ncol=2) # Posiciones
-z1 <- unique(Z.band[,1]); z2 <- unique(Z.band[,2]); # Posiciones por separado
-n1 <- length(z1); n2 <- length(z2) # Longitud de dichas posiciones
-scc <- matrix(NA,n1*n2,2) # Se crea la matriz donde irá el valor de SCC para cada posicion
-ind.inside.band <- aa$ind.inside.cover # Solo las zonas cubiertas por la triangulacion
-scc[ind.inside.band,] <- aa$scc[,,2] # se asigna el SCC a esas zonas
-scc.limit <- c(min(scc[,1],na.rm=TRUE), max(scc[,2],na.rm=TRUE)) # Limites: minimo de la inferior y máximo de la superior
-
-scc.l.mtx <- matrix(scc[,1],nrow=n2,ncol=n1) # Lower SCC for each location. 
-scc.u.mtx <- matrix(scc[,2],nrow=n2,ncol=n1) # Upper SCC for each location.
-scc.l.mtx[scc.l.mtx<0]=NA # Los que cumplen lo esperable se ponen NA para no representarlos, solo los Lower SCC que son positivos se quedan
-scc.u.mtx[scc.u.mtx>0]=NA # Los que cumplen lo esperable se ponen NA para no representarlos, solo los Upper SCC que son negativos se quedan
-
-image.plot(z2,z1,scc.l.mtx, zlim = scc.limit) # Regiones en que la diferencia de medias es positiva (cae encima del 0), o sea, que la imagen 1 es más fuerte que la imagen 2 en esas áreas
-image.plot(z2,z1,scc.u.mtx, zlim = scc.limit) # Regiones en que la diferencia de medias es negativa (cae debajo del 0), o sea, que la imagen 2 es más fuerte que la imagen 1 en esas áreas
-
-points.P<-which(scc.l.mtx>0,arr.ind=TRUE) # Puntos con diferencia de medias positiva (primera más fuerte)
-points.N<-which(scc.u.mtx<0,arr.ind=TRUE) # Puntos con diferencia de medias negativa (segunda más fuerte)
-
-points(points.P,
-       type="p",
-       pch=".",
-       col="navy",
-       cex=9)  
-
-points(points.N,
-       type="p",
-       pch=".",
-       col="orange",
-       cex=9) 
-
-# Type: p,l,b,c,o,s,S,h,n
-# pch = 0:18 =:46
-# col=
-# bg= background
-# lwd= line width
-
-############################/
+  
+      points_CNS_AGE <- my_points(SCC_COMP_CNS_AGE) # Returns coordinates of points above or below estimated mean function (points.P,points.N; in that order)
+      
+      ## SO NOW IF YOU GO BACK, PLOT THE SCC YOU NEED AND THEN RUN THE FOLLOWING LINES UPON IT, IT WILL DRAW THE POINTS WHICH ARE UP OR DOWN SCC
+      
+      points(points_CNS_AGE[[1]],
+             type="p",
+             pch=15,
+             col="navy")  
+      
+      points(points_CNS_AGE[[2]],
+             type="p",
+             pch=15,
+             col="yellow") 
+      
+      # Type: p,l,b,c,o,s,S,h,n
+      # pch = 0:18 =:46
+      # col=
+      # bg= background
+      # lwd= line width
 
 
 
 
 ## prueba con un unico paciente contra todos los controles
 
-singlePPT<-YcreatorAD(13)
+singlePPT<-YcreatorAD(17)
 
 # Response Variable (multiple):
 
@@ -1321,57 +1192,60 @@ lambda=10^{seq(-6,3,0.5)} # penalty parameters
 alpha.grid=c(0.01,0.005,0.001) # vector of confidence levels
 
 
+
 SCC_COMP_single=scc.image(Ya=Y_AD,Yb=Y_CN,Z=Z,d.est=d.est,d.band=d.band,r=r,
                           V.est.a=V.est,Tr.est.a=Tr.est,
                           V.band.a=V.band,Tr.band.a=Tr.band,
                           penalty=TRUE,lambda=lambda,alpha.grid=alpha.grid,adjust.sigma=TRUE)    
 
 
-plot(SCC_COMP_single,
-     breaks=c(0,2),
-     col="turquoise",
-     # breaks=seq(from=0,to=2,length.out = 65),
-     xlab="Longitudinal (1-95)",
-     ylab="Transversal (1-79)",
-     sub="Difference between 1 random AD and CN group",
-     col.sub="red")
+  plot(SCC_COMP_single,
+       breaks=c(0,2),
+       col="turquoise",
+       # breaks=seq(from=0,to=2,length.out = 65),
+       xlab="Longitudinal (1-95)",
+       ylab="Transversal (1-79)",
+       sub="Difference between 1 random AD and CN group",
+       col.sub="red")
 
 
-aa=SCC_COMP_single
-
-Z.band <- matrix(aa$Z.band,ncol=2) # Posiciones
-z1 <- unique(Z.band[,1]); z2 <- unique(Z.band[,2]); # Posiciones por separado
-n1 <- length(z1); n2 <- length(z2) # Longitud de dichas posiciones
-scc <- matrix(NA,n1*n2,2) # Se crea la matriz donde irá el valor de SCC para cada posicion
-ind.inside.band <- aa$ind.inside.cover # Solo las zonas cubiertas por la triangulacion
-scc[ind.inside.band,] <- aa$scc[,,2] # se asigna el SCC a esas zonas
-scc.limit <- c(min(scc[,1],na.rm=TRUE), max(scc[,2],na.rm=TRUE)) # Limites: minimo de la inferior y máximo de la superior
-
-scc.l.mtx <- matrix(scc[,1],nrow=n2,ncol=n1) # Lower SCC for each location. 
-scc.u.mtx <- matrix(scc[,2],nrow=n2,ncol=n1) # Upper SCC for each location.
-scc.l.mtx[scc.l.mtx<0]=NA # Los que cumplen lo esperable se ponen NA para no representarlos, solo los Lower SCC que son positivos se quedan
-scc.u.mtx[scc.u.mtx>0]=NA # Los que cumplen lo esperable se ponen NA para no representarlos, solo los Upper SCC que son negativos se quedan
-
-image.plot(z2,z1,scc.l.mtx, zlim = scc.limit) # Regiones en que la diferencia de medias es positiva (cae encima del 0), o sea, que la imagen 1 es más fuerte que la imagen 2 en esas áreas
-image.plot(z2,z1,scc.u.mtx, zlim = scc.limit) # Regiones en que la diferencia de medias es negativa (cae debajo del 0), o sea, que la imagen 2 es más fuerte que la imagen 1 en esas áreas
-
-points.P<-which(scc.l.mtx>0,arr.ind=TRUE) # Puntos con diferencia de medias positiva (primera más fuerte)
-points.N<-which(scc.u.mtx<0,arr.ind=TRUE) # Puntos con diferencia de medias negativa (segunda más fuerte)
-
-points(points.P,
-       type="p",
-       pch=".",
-       col="orange",
-       cex=9)  
-
-points(points.N,
-       type="p",
-       pch=".",
-       col="navy",
-       cex=9) 
+      points_single <- my_points(SCC_COMP_single) # Returns coordinates of points above or below estimated mean function (points.P,points.N; in that order)
+      
+        ## SO NOW IF YOU GO BACK, PLOT THE SCC YOU NEED AND THEN RUN THE FOLLOWING LINES UPON IT, IT WILL DRAW THE POINTS WHICH ARE UP OR DOWN SCC
+        
+        points(points_single[[1]],
+               type="p",
+               pch=15,
+               col="navy")  
+        
+        points(points_single[[2]],
+               type="p",
+               pch=15,
+               col="yellow") 
+        
+        # Type: p,l,b,c,o,s,S,h,n
+        # pch = 0:18 =:46
+        # col=
+        # bg= background
+        # lwd= line width
 
 
-##################################################/
+        
+        
+        
+        ############################/
+        ############################/
+        ############################/
+        ############################/
+        ############################/
+        # CODIGO OFICIAL HASTA AQUI /
+        ############################/
+        ############################/
+        ############################/
+        ############################/
+        ############################/
+
+        
 
 
 # Percentage of locations where the true difference between mean functions value fall within the SCC
