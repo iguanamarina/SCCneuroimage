@@ -13,14 +13,12 @@ In this GitHub repository you will find everything you need to replicate results
 * R scripts for the ellaboration of SCCs for neuroimaging data.
 
 
+## KEY STEPS:
+
+
 
 ```r
-mte_get(
-  usuario = NULL,
-  contra = NULL,
-  carpeta = getwd(),
-  asig = NULL,
-  sobrescribir = FALSE,
-  modoArchivos = "int"
-)
+Data[sample(nrow(Data),20),]
 ```
+
+
