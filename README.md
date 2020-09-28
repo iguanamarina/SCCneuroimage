@@ -17,8 +17,4 @@ In this GitHub repository you will find everything you need to replicate results
 
 
 
-```r
-Data[sample(nrow(Data),20),]
-```
-
 
