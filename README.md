@@ -16,9 +16,28 @@ In this GitHub repository you will find everything you need to replicate results
 ## KEY STEPS:
 
 
-
-
-![Triangulation N=8](C:/Users/Juan A. Arias/Documents/MEGA/PhD/5. Wang et al (SCC's)/SCC images article/Triangulation/triangulationN8.png)
-
-
-
+1. PET images pre-processing
+  + Realignement
+  + Unwrapping
+  + Corregistration
+  + Normalization
+  + Masking
+  
+2. Import PET images into R
+  + Import one (1) individual
+  + Loop for all participants
+  + Create a complete and clean database (vars: PPT, group, sex, age, z, x, y, PET)
+  + Mean average normalization
+  
+3. Calculate Simultaneous Confidence Corridors (SCC)
+  + List of PPTs according to their group/sex/age or a combination
+  + Convert data to a Functional Data setup (SCC matrices)
+  + Extract contours for PET data
+  + Compute triangulations over these contours
+  + Construct SCCs for one-sample case
+  + Construct SCCs for the difference between estimated mean functions
+  
+4. Visualization of regions suffering AD-induced neural loss
+  + Visualize SCC for the difference between two groups
+  + Overlay points falling above or below estimated confidence corridors
+  + Exploration of results
