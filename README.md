@@ -18,3 +18,7 @@ In this GitHub repository you will find everything you need to replicate results
 
 
 
+![Triangulation N=8](C:/Users/Juan A. Arias/Documents/MEGA/PhD/5. Wang et al (SCC's)/SCC images article/Triangulation/triangulationN8.png)
+
+
+
