@@ -506,8 +506,8 @@ YcreatorAD_more_75 <- function(i){
         
 # Z are the coordinates where data is measured:
 
-x <-rep(1:79, each=95, length.out = 7505) 
-y <-rep(1:95,length.out = 7505)
+x <- rep(1:79, each = 95, length.out = 7505) 
+y <- rep(1:95,length.out = 7505)
 Z <- cbind(as.matrix(x),as.matrix(y)); Z
 
 
@@ -528,29 +528,29 @@ head(dat)
 rownames(dat) <- NULL # Remove row numbering, for some reason this can be problematic sometimes
 
 df = getContourLines(dat[1:7504,], # select all rows but for the last one
-                     levels=c(0)) # and search for the jump between PET=0 and other value, that will be the boundary
+                     levels = c(0)) # and search for the jump between PET=0 and other value, that will be the boundary
 
-ggplot(df,aes(x,y,colour=z)) + geom_path() # Display of brain boundaries for Z=30
+ggplot(df,aes(x,y,colour = z)) + geom_path() # Display of brain boundaries for Z=30
 
-contour30=df # Contour in z=30 -> contour30 (change if using a different Z)
+contour30 = df # Contour in z=30 -> contour30 (change if using a different Z)
 head(contour30);str(contour30)
 
 
 ### Now for the different sets of coordinates as we will need external boundaries and internal holes in a list:
 
-contour<-function(x){
+contour <- function(x){
   
-  aa<-contour30[contour30$GID==x,] # We keep GID==x (0,1,2,3...)
-  a<-aa[,5:6] # Then we keep just the coordinates 
+  aa <- contour30[contour30$GID == x,] # We keep GID==x (0,1,2,3...)
+  a <- aa[,5:6] # Then we keep just the coordinates 
   print(a) # and then print in order to loop and make a list
 }
 
-coord<-list()
+coord <- list()
 
-for (i in 0:max(contour30$GID)){ #change contour30 to any other name previously assigned if necessary
+for (i in 0:max(contour30$GID)) { #change contour30 to any other name previously assigned if necessary
   
-  coord[[i+1]]<-contour(i)
-  rownames(coord[[i+1]]) <- NULL
+  coord[[i + 1]] <- contour(i)
+  rownames(coord[[i + 1]]) <- NULL
 }
 
 
@@ -569,17 +569,23 @@ head(coord[[3]],10); points(coord[[3]]) # second hole
 # N = An integer parameter controlling the fineness of the triangulation and subsequent triangulation. As n increases the fineness increases. Usually, n = 8 seems to be a good choice.
 
 
-VT8=TriMesh(coord[[1]],8,list(as.matrix(coord[[2]]),as.matrix(coord[[3]])))
+VT8 = TriMesh(coord[[1]],8,list(as.matrix(coord[[2]]),as.matrix(coord[[3]])))
 head(VT8$V,10);head(VT8$Tr,10) # Vertices' coordinates and nodes you have to link to create the triangulation
 
 # N=8 is usually a good enough fineness degree although you can use finer triangulations which will take more time to compute
 
-VT15=TriMesh(coord[[1]],15,list(as.matrix(coord[[2]]),as.matrix(coord[[3]])))
+VT15 = TriMesh(coord[[1]],15,list(as.matrix(coord[[2]]),as.matrix(coord[[3]])))
 head(VT15$V,10);head(VT15$Tr,10)
 
-VT25=TriMesh(coord[[1]],25,list(as.matrix(coord[[2]]),as.matrix(coord[[3]])))
+VT25 = TriMesh(coord[[1]],25,list(as.matrix(coord[[2]]),as.matrix(coord[[3]])))
 head(VT25$V,10);head(VT25$Tr,10)
 
+par(pin = c(5.25,6.33),
+    mai = c(0.5,0.5,0.5,0.5))
+
+TriPlot(VT8$V, VT8$Tr, col = 1, lwd = 1)
+TriPlot(VT15$V, VT15$Tr, col = 1, lwd = 1)
+TriPlot(VT25$V, VT25$Tr, col = 1, lwd = 1)
 
 # In order to be consistent we use common names Brain.V and Brain.Tr. From here onwards most of the names follow the ones provided by Wang et al (2019)
 
@@ -588,61 +594,51 @@ Brain.Tr <- VT15[[2]]
 
 head(Brain.V);head(Brain.Tr)
 
-
-V.est=as.matrix(Brain.V)
-# Brain.v<-cbind(Brain.V[,2],Brain.V[,1]) # In case you need to transpose the data
-Tr.est=as.matrix(Brain.Tr)
+V.est = as.matrix(Brain.V) # Brain.v <- cbind(Brain.V[,2],Brain.V[,1]) # In case you need to transpose the data
+Tr.est = as.matrix(Brain.Tr)
 
 V.band=as.matrix(Brain.V)
 Tr.band=as.matrix(Brain.Tr) 
 
-
 # Response Variable:
 
-Y_CN=SCC_matrix_CN
-Y_AD=SCC_matrix_AD
+Y_CN = SCC_matrix_CN
+Y_AD = SCC_matrix_AD
 
-Y_AD_F=SCC_matrix_AD_F
-Y_AD_M=SCC_matrix_AD_M
+Y_AD_F = SCC_matrix_AD_F
+Y_AD_M = SCC_matrix_AD_M
 
-Y_CN_F=SCC_matrix_CN_F
-Y_CN_M=SCC_matrix_CN_M
+Y_CN_F = SCC_matrix_CN_F
+Y_CN_M = SCC_matrix_CN_M
 
-Y_CN_L_75=SCC_matrix_CN_less_75
-Y_CN_M_75=SCC_matrix_CN_more_75
+Y_CN_L_75 = SCC_matrix_CN_less_75
+Y_CN_M_75 = SCC_matrix_CN_more_75
 
-Y_AD_L_75=SCC_matrix_AD_less_75
-Y_AD_M_75=SCC_matrix_AD_more_75
-
-
+Y_AD_L_75 = SCC_matrix_AD_less_75
+Y_AD_M_75 = SCC_matrix_AD_more_75
 
 ### ########################################################## ###
 #####        *OTHER PARAMETERS FOR SCC ESTIMATION*            ####
 ### ########################################################## ###
 
-
 # Following Wang et al's recomendations:
 
-d.est=5 # degree of spline for mean function 
-d.band=2 # degree of spline for SCC
-r=1 # smoothing parameter
-lambda=10^{seq(-6,3,0.5)} # penalty parameters
-alpha.grid=c(0.10,0.05,0.01) # vector of confidence levels
-
-
+d.est = 5 # degree of spline for mean function 
+d.band = 2 # degree of spline for SCC
+r = 1 # smoothing parameter
+lambda = 10^{seq(-6,3,0.5)} # penalty parameters
+alpha.grid = c(0.10,0.05,0.01) # vector of confidence levels
 
 ### ########################################################## ###
 #####               *CONSTRUCTION OF SCC'S*                   ####
 ### ########################################################## ###
 
-
 # Run one sample SCC construction:
 
-
-SCC_CN_1=scc.image(Ya=Y_CN,Z=Z,d.est=d.est,d.band=d.band,r=r,
-                   V.est.a=V.est,Tr.est.a=Tr.est,
-                   V.band.a=V.band,Tr.band.a=Tr.band,
-                   penalty=TRUE,lambda=lambda,alpha.grid=alpha.grid,adjust.sigma=TRUE)
+SCC_CN_1 = scc.image(Ya = Y_CN,Z = Z,d.est = d.est,d.band = d.band,r = r,
+                     V.est.a = V.est,Tr.est.a = Tr.est,
+                     V.band.a = V.band,Tr.band.a = Tr.band,
+                     penalty = TRUE,lambda = lambda,alpha.grid = alpha.grid,adjust.sigma = TRUE)
 
   plot(SCC_CN_1,
        breaks=seq(from=0,to=2,length.out = 65),
@@ -675,15 +671,15 @@ SCC_AD_1=scc.image(Ya=Y_AD,Z=Z,d.est=d.est,d.band=d.band,r=r,
    # between groups' mean functions.
   
    ## IN CASE YOU WANT TO EXPORT PLOTS THIS IS EASIER AFTER (...) :  
-  
-      par(las=1,
+
+  par(las=1,
           col.main="white",
           col.lab="white",
           col.sub="white")
       
       plot(SCC_AD_1,
            axes=FALSE,
-           breaks=seq(from=0,to=2,length.out = 65),
+           breaks=seq(from=0,to=1.6,length.out = 65), #1.6 because max(SCC_AD_1$scc) and max(SCC_CN_1$scc) are both below
            col=,
            family ="serif",
            horizontal=F)
@@ -983,12 +979,12 @@ SCC_COMP_F_ADCN=scc.image(Ya=Y_CN_F,Yb=Y_AD_F,Z=Z,d.est=d.est,d.band=d.band,r=r,
       points(points_F_ADCN[[1]],
              type="p",
              pch=15,
-             col="navy")  
+             col="yellow")  
       
       points(points_F_ADCN[[2]],
              type="p",
              pch=15,
-             col="yellow") 
+             col="navy") 
       
       # Type: p,l,b,c,o,s,S,h,n
       # pch = 0:18 =:46
