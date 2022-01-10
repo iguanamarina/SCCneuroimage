@@ -1,98 +1,86 @@
-#### ########################################################## ####
-#### ########################################################## ####
-######                * MASTER SCRIPT FOR Z'S*                 #####
-#### ########################################################## ####
-#### ########################################################## ####
+############################## ################### ############## ### 
+##
+## Script name: MASTERSCRIPT (for simulations)
+##
+## Purpose of script: Script for the calculation of sensibility, specificity, predictive value... 
+## and other measures for comparing SCC and SPM using simulated data.
+##
+## Date Created: 2022-01-10
+##
+## Author: Juan A. Arias (M.Sc.)
+## Email: juanantonio.arias.lopez@usc.es
+## Webpage: https://messy-dataset.xyz
+##
+## Notes: This script is self-contained and nothing should be necessary but for
+## pressing enter again and again (after hyperparameter setup). However, results
+## may differ with slight changes.
+##   
+############################## ################### ############## ### 
+
+
+####  
+# PREAMBLE: ----
+#### 
+
+
+#* Set working directory: ----
+
+setwd("~/GitHub/SCCneuroimage")
+
+#* Tune Options ----
+options(scipen = 6, digits = 4) # View outputs in non-scientific notation
+memory.limit(30000000)     # This is needed on some PCs to increase memory allowance
+
+#* Load up packages ---- 
 
 library(gamair);library(oro.nifti);library(memisc);library(devtools);library(remotes);library(readr);library(imager);library(itsadug);library(ggplot2);library(contoureR);library(fields);library(BPST);library(Triangulation);library(ImageSCC)
 
-setwd("C:/Users/Juan A. Arias/Desktop/Simulaciones PET CHUS")
+#* Load up functions ----
 
-# HIPERPARAMETER:
+load("~/GitHub/SCCneuroimage/Functions/f.clean.RData") # Function for NiFTi -> df
+load("~/GitHub/SCCneuroimage/Functions/my_points.RData") # Function for getting relevant points from SCC
+
+#* Hyper-parameters ----
 
 param.z = 30
 
-### ########################################################## ###
-#####                  * LOAD    TEMPLATES *                  #### 
-### ########################################################## ###
 
-f.clean <- function(name) {
+####  
+# PART 1: CONTOURS OF NEURO-DATA ----------
+####
+
+
+#* Basic data for contours ----
   
-  ## Load Data
-  
-  file <- readNIfTI(fname = name, verbose = FALSE, warn = -1, reorient = TRUE, call = NULL, read_data = TRUE)
-  namex <- as.character(name)
-  n = img_data(file)
-  n = to.data.frame(n)
-
-  dataframe <- data.frame(z = integer(),x = integer(),y = integer(),pet = integer()) 
-  
-  # Loop for 91 slices of Z in the NiFtI image -> move to dataframe
-  
-  for (i in seq(1:91)) {
-    
-    n_lim = n[n$Var2==i,] # Select just one Z slice
-    n_lim$Var1=NULL
-    n_lim$Var2=NULL
-    
-    z <- rep(i, length.out = 9919)
-    x <- rep(1:91, each = 109, length.out = 9919) 
-    y <- rep(1:109, length.out = 9919)
-    
-    attach(n_lim)
-    pet <- c(`1`,`2`,`3`,`4`,`5`,`6`,`7`,`8`,`9`,`10`,`11`,`12`,`13`,`14`,
-             `15`,`16`,`17`,`18`,`19`,`20`,`21`,`22`,`23`,`24`,`25`,`26`,
-             `27`,`28`,`29`,`30`,`31`,`32`,`33`,`34`,`35`,`36`,`37`,`38`,
-             `39`,`40`,`41`,`42`,`43`,`44`,`45`,`46`,`47`,`48`,`49`,`50`,
-             `51`,`52`,`53`,`54`,`55`,`56`,`57`,`58`,`59`,`60`,`61`,`62`,
-             `63`,`64`,`65`,`66`,`67`,`68`,`69`,`70`,`71`,`72`,`73`,`74`,
-             `75`,`76`,`77`,`78`,`79`,`80`,`81`,`82`,`83`,`84`,`85`,`86`,
-             `87`,`88`,`89`,`90`,`91`)
-    detach(n_lim)
-    
-    temp0 = data.frame(z,x,y,pet) # temporal dataframe
-    temp1 <- print(temp0) 
-    dataframe <- rbind(dataframe,temp1)
-  }
-
-  print(dataframe) # Necessary for assigning an object name
-
-}
-
 Data = f.clean("new_mask") 
-
-### ########################################################## ###
-#####                *CONTOURS OF NEURO-DATA*                 ####
-### ########################################################## ###
-
 Y <- subset(Data, Data$z == param.z) 
 Y <- Y[1:9919,4] 
 Y <- as.matrix(Y)
 Y = t(Y) 
 Y[is.nan(Y)] <- 0
-SCC <- Y; rm(Y)
+SCC <- Y; rm(Y); rm(Data)
 
-# Z are the coordinates where data is measured:
+
+#* Coordinates ---- 
+
+# These are adapted to my current nifti size, in the future it would be strategic to develop
+# this code for a more generic setup
 
 x <- rep(1:91, each = 109, length.out = 9919) 
 y <- rep(1:109,length.out = 9919)
 Z <- cbind(as.matrix(x),as.matrix(y)); Z
-
 dat <- cbind(Z,t(SCC))
-
 dat <- as.data.frame(dat)
 dat[is.na(dat)] <- 0
 sum(is.na(dat$pet)) # should be = 0
-head(dat)
-
 rownames(dat) <- NULL 
+rm(x); rm(y); rm(Z)
 
+# Get contour for the area where values change from 0 to 1 (it's a template)
 df = getContourLines(dat[1:9919,], levels = c(0)) 
-
 ggplot(df, aes(x, y, colour = z)) + geom_path() 
-
 contour = df 
-head(contour);str(contour)
+rm(df); rm(dat)
 
 f.contour <- function(x){
   
@@ -103,7 +91,7 @@ f.contour <- function(x){
 
 coord <- list()
 
-for (i in 0:max(contour$GID)) { #change contour30 to any other name previously assigned if necessary
+for (i in 0:max(contour$GID)) { #change contour to any other name previously assigned if necessary
    
   coord[[i + 1]] <- f.contour(i)
   rownames(coord[[ i + 1 ]]) <- NULL
@@ -117,39 +105,43 @@ head(coord[[2]],10); points(coord[[2]]) # first hole
 head(coord[[3]],10); points(coord[[3]]) # second hole
 # (...) 
 
+# Most of times, if there is no 'holes' in that brain slice, some of these lines, loops and stuff
+# won't be necessary.
 
-### ########################################################## ###
-#####             *TRIANGULATION PARAMETERS*                  ####
-### ########################################################## ###
 
-VT = TriMesh(coord[[1]], 8) # Triangulation degree of fineness: tuning parameter
+####
+# PART 2: TRIANGULATION PARAMETERS ----------
+####
+
+#* Get coordinates in pckg Triangulation format: ----
+
+VT = TriMesh(coord[[1]], n = 15) 
+
+# n = Triangulation degree of fineness (8 is recommended)
+# However, I use n = 15 because Arias-LÃ³pez et al. (2021) suggests computing times for
+# higher n values are sensible
 
 head(VT$V,10);head(VT$Tr,10) 
 
 # Create it first if it doesn't exist
-setwd(paste0("C:/Users/Juan A. Arias/Desktop/Simulaciones PET CHUS/SCC matrix/z", as.character(param.z)))
+setwd(paste0("~/GitHub/SCCneuroimage/z", as.character(param.z)))
 save(VT, file = paste0("contour", as.character(param.z), ".RData"))
      
 
 
-#################################################
-#  THIS PART IS TO CREATE SCC MATRIXES FOR CONTROLS
-#################################################
+
+####
+# PART 3: CREATE SCC MATRIXES FOR CONTROLS ------
+####
 
 
-### ################################################## ###
-#####           *FUNCIÃ“N CARGA DE DATOS*              ####
-### ################################################## ###
+# *Load data and Create DB ----
 
-setwd("C:/Users/Juan A. Arias/Desktop/Simulaciones PET CHUS/masked")
+setwd("~/GitHub/SCCneuroimage/PETimg_masked for simulations")
 
 number <- paste0("C", 1:25)
 name <- paste0("masked_swww", number, "_tripleNormEsp_w00_rrec_OSEM3D_32_it1")
-
-
-### ################################################## ###
-#####             *CREATE   DATABASE*                ##### 
-### ################################################## ###
+# Only 25 files are controls and they follow the above defined structure
 
 database_CN <- data.frame(CN_number = integer(),z = integer(), x = integer(), y = integer(), pet = integer())
 
@@ -920,11 +912,11 @@ referencia$roi <- referencia$roi*10
 referencia$roi <- as.character(referencia$roi)
 
 for (i in 1:nrow(referencia)) {
-referencia$sens[i] <- paste0(round(as.numeric(referencia$sensMEAN[i]), 2), as.character("±"), round(as.numeric(referencia$sensSD[i]),2)) 
+referencia$sens[i] <- paste0(round(as.numeric(referencia$sensMEAN[i]), 2), as.character("?"), round(as.numeric(referencia$sensSD[i]),2)) 
 }
 
 for (i in 1:nrow(referencia)) {
-referencia$esp[i] <- paste0(round(as.numeric(referencia$espMEAN[i]), 2), as.character("±"), round(as.numeric(referencia$espSD[i]),2)) 
+referencia$esp[i] <- paste0(round(as.numeric(referencia$espMEAN[i]), 2), as.character("?"), round(as.numeric(referencia$espSD[i]),2)) 
 }
 
 
