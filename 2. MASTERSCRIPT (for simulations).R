@@ -23,7 +23,7 @@
 #### 
 
 
-#* Set working directory: ----
+#* Set working directory ----
 
 setwd("~/GitHub/SCCneuroimage")
 
@@ -31,9 +31,14 @@ setwd("~/GitHub/SCCneuroimage")
 options(scipen = 6, digits = 4) # View outputs in non-scientific notation
 memory.limit(30000000)     # This is needed on some PCs to increase memory allowance
 
+#* Install Packgs ----
+
+install.packages("remotes")
+remotes::install_github("skgrange/threadr")
+
 #* Load up packages ---- 
 
-library(gamair);library(oro.nifti);library(memisc);library(devtools);library(remotes);library(readr);library(imager);library(itsadug);library(ggplot2);library(contoureR);library(fields);library(BPST);library(Triangulation);library(ImageSCC)
+library(gamair);library(oro.nifti);library(memisc);library(devtools);library(remotes);library(readr);library(imager);library(itsadug);library(ggplot2);library(contoureR);library(fields);library(BPST);library(Triangulation);library(ImageSCC); library(tidyr); library(dplyr);library(stringr); library(threadr);library(memisc)
 
 #* Load up functions ----
 
@@ -67,14 +72,14 @@ SCC <- Y; rm(Y); rm(Data)
 # this code for a more generic setup
 
 x <- rep(1:91, each = 109, length.out = 9919) 
-y <- rep(1:109,length.out = 9919)
+y <- rep(1:109, length.out = 9919)
 Z <- cbind(as.matrix(x),as.matrix(y)); Z
 dat <- cbind(Z,t(SCC))
 dat <- as.data.frame(dat)
 dat[is.na(dat)] <- 0
 sum(is.na(dat$pet)) # should be = 0
 rownames(dat) <- NULL 
-rm(x); rm(y); rm(Z)
+rm(x); rm(y)
 
 # Get contour for the area where values change from 0 to 1 (it's a template)
 df = getContourLines(dat[1:9919,], levels = c(0)) 
@@ -128,8 +133,6 @@ setwd(paste0("~/GitHub/SCCneuroimage/z", as.character(param.z)))
 save(VT, file = paste0("contour", as.character(param.z), ".RData"))
      
 
-
-
 ####
 # PART 3: CREATE SCC MATRIXES FOR CONTROLS ------
 ####
@@ -148,25 +151,26 @@ database_CN <- data.frame(CN_number = integer(),z = integer(), x = integer(), y 
 for (i in 1:length(name)) {
   
   temporal <- f.clean(name[i])
-  CN_number <- rep(number[i], length.out = 9919)
+  CN_number <- rep(number[i], length.out = nrow(Z))
   temporal <- cbind(CN_number,temporal)
   database_CN <- rbind(database_CN,temporal)
 }
 
 nrow(database_CN[database_CN$pet < 0, ]) # No negative values
-rm(temporal)
+rm(temporal); rm(CN_number)
 
 
-### ################################################## ###
-#####                *SCC   MATRIX*                  #####
-### ################################################## ###
+# *Create SCC Matrix ----
 
-SCC_CN <- matrix(nrow = 25, ncol = 9919)
+# Working on a functional data setup requires for the data to be in a concrete format which
+# usually implies a long line of data points so that each row represents a function
+
+SCC_CN <- matrix(nrow = length(name), ncol = nrow(Z))
 
 for (i in 1:length(number)) {
 
   Y <- subset(database_CN, database_CN$CN_number == number[i] & database_CN$z == param.z) 
-  Y <- Y[1:9919,5] 
+  Y <- Y[1:9919, 5] 
   Y <- as.matrix(Y)
   Y = t(Y) 
   Y[is.nan(Y)] <- 0
@@ -174,35 +178,28 @@ for (i in 1:length(number)) {
   
 }
 
-
-# Sometimes its necessary:
+# Sometimes R really doesn't want to remove NA so this might be necessary:
 
   # na.zero <- function(x) {
   #     x[is.na(x)] <- 0
   # }
-  # 
-  # 
   # SCC_CN <-  apply(SCC_CN, 2, na.zero)
 
 
-setwd(paste0("C:/Users/Juan A. Arias/Desktop/Simulaciones PET CHUS/SCC matrix/z", as.character(param.z)))
-save(SCC_CN, file = "SCC_CN.RData")
+setwd(paste0("~/GitHub/SCCneuroimage/z", as.character(param.z)))
+save(SCC_CN, file = "SCC_CN.RData") # SCC matrix for Controls
 
 
-##########################################################################
-#  SCRIPT TO CREATE SCC MATRIXES FOR PATHOLOGICAL 
-#  THIS SCRIPT PRODUCES SCC MATRICES PRESENT IN SIMULACIONES/SCC_matrix
-#  AFTER THIS SCRIPT GO TO  ->  "SCRIPT FOR SCCs.R" 
-##########################################################################
+####
+# PART 4: CREATE SCC MATRIXES FOR PATHOLOGICAL -------
+####
+
+# This section is pretty much the same as the section on Controls, but now with much more info
 
 
+# *Load data and Create DB ----
 
-### ################################################## ###
-#####           *FUNCIÓN CARGA DE DATOS*              ####
-### ################################################## ###
-
-setwd("C:/Users/Juan A. Arias/Desktop/Simulaciones PET CHUS/masked")
-
+setwd("~/GitHub/SCCneuroimage/PETimg_masked for simulations")
 number <- paste0("C", 1:25)
 region <- c("roiAD", "w32", "w79", "w214", "w271", "w413")
 roi <- c(1, 2, 4, 6, 8)
@@ -211,7 +208,7 @@ for (i in 1:length(region)) {
   
   for (j in 1:length(roi)) {
     
-    setwd("C:/Users/Juan A. Arias/Desktop/Simulaciones PET CHUS/masked")
+    setwd("~/GitHub/SCCneuroimage/PETimg_masked for simulations")
     
     # IMPORTANTE: tuning parameters
     
@@ -219,116 +216,94 @@ for (i in 1:length(region)) {
     ROI = roi[j] 
     name <- paste0("masked_swww", number, "_tripleNormEsp_", REGION, "_0_", ROI, "_rrec_OSEM3D_32_it1")
     
-    
-    ### ################################################## ###
-    #####             *CREATE   DATABASE*                ##### This can be reduced with functions (!!)
-    ### ################################################## ###
-    
     database_AD <- data.frame(AD_number = integer(),z = integer(), x = integer(), y = integer(), pet = integer())
     
     for (k in 1:length(name)) {
       
       temporal <- f.clean(name[k])
-      AD_number <- rep(paste0(number[k], "_", as.character(REGION), "_", as.character(ROI)), length.out = 9919)
+      AD_number <- rep(paste0(number[k], "_", as.character(REGION), "_", as.character(ROI)), length.out = nrow(Z))
       temporal <- cbind(AD_number, temporal)
       database_AD <- rbind(database_AD, temporal)
-      
     }
-    
-    
-    SCC_matrix <- matrix(nrow = length(name), ncol = 9919)
+
+# *Create SCC Matrix ---- 
+       
+    SCC_matrix <- matrix(nrow = length(name), ncol = nrow(Z))
     
     for (k in 1:length(number)) {
     
       Y <- subset(database_AD, AD_number == paste0(number[k], "_", as.character(REGION), "_", as.character(ROI)) &
-                            z == param.z)
+                  z == param.z)
       Y <- Y[1:9919, 5] 
       Y <- as.matrix(Y)
       Y = t(Y) 
       Y[is.nan(Y)] <- 0
       SCC_matrix[k, ] <- Y
-      
     }
     
-    setwd(paste0("C:/Users/Juan A. Arias/Desktop/Simulaciones PET CHUS/SCC matrix/z", as.character(param.z)))
+    setwd(paste0("~/GitHub/SCCneuroimage/z", as.character(param.z)))
     save(SCC_matrix, file = paste0("SCC_", REGION, "_", ROI, ".RData"))
 
   }
 }
 
 
-### ########################################################## ###
-#####            **   SCRIPT YA PARA SCCs  **                 ####
-### ########################################################## ###
+####
+# PART 5: COMPUTE SCCs PER SE -------
+####
 
-# install.packages("remotes")
-# remotes::install_github("skgrange/threadr")
 
-library(gamair);library(oro.nifti);library(remotes);library(readr);library(imager);library(itsadug);library(ggplot2);library(contoureR);library(fields);library(BPST);library(Triangulation);library(ImageSCC); library(tidyr); library(dplyr);library(stringr); library(threadr);library(memisc)
+#* Preliminary stuff ----
 
-setwd(paste0("C:/Users/Juan A. Arias/Desktop/Simulaciones PET CHUS/SCC matrix/z", as.character(param.z)))
+setwd(paste0("~/GitHub/SCCneuroimage/z", as.character(param.z)))
 
-# In order to be consistent we use common names Brain.V and Brain.Tr. From here onwards most of the names follow the ones provided by Wang et al (2019)
+# In order to be consistent we use common names Brain.V and Brain.Tr. 
+# From here onwards most of the names follow the ones provided by Wang et al (2019)
 
 Brain.V <- VT[[1]]
 Brain.Tr <- VT[[2]]
 
-head(Brain.V);head(Brain.Tr)
-
-
 V.est = as.matrix(Brain.V)
-# Brain.v<-cbind(Brain.V[,2],Brain.V[,1]) # In case you need to transpose the data
+# Brain.v <- cbind(Brain.V[,2],Brain.V[,1]) # In case you need to transpose the data
 Tr.est = as.matrix(Brain.Tr)
-
 V.band = as.matrix(Brain.V)
 Tr.band = as.matrix(Brain.Tr) 
 
 
-region <- c("roiAD", "w32", "w79", "w214", "w271", "w413")
-roi <- c(1, 2, 4, 6, 8) 
-number <- paste0("C", 1:25)
-
-
-### HERE STARTS THE LOOP: LADIES AND GENTLEMAN...FASTEN YOUR SEATBELTS ###
-
-## TIEMPOS -> START AT:
+#* The Loop: Fasten your seat belts ----
 
 for (i in 1:length(region)) {
   
   for (j in 1:length(roi)) {
     
-    setwd(paste0("C:/Users/Juan A. Arias/Desktop/Simulaciones PET CHUS/SCC matrix/z", as.character(param.z)))
+    setwd(paste0("~/GitHub/SCCneuroimage/z", as.character(param.z)))
     
     # Response Variable:
     
-    name_CN <- paste0("C:/Users/Juan A. Arias/Desktop/Simulaciones PET CHUS/SCC matrix/z", as.character(param.z), "/SCC_CN.RData")
-    name_AD <- paste0("C:/Users/Juan A. Arias/Desktop/Simulaciones PET CHUS/SCC matrix/z", as.character(param.z), "/SCC_", 
+    name_CN <- paste0("~/GitHub/SCCneuroimage/z", as.character(param.z), "/SCC_CN.RData")
+    name_AD <- paste0("~/GitHub/SCCneuroimage/z", as.character(param.z), "/SCC_", 
                       region[i], "_", roi[j], ".RData")
 
     SCC_CN <- threadr::read_rdata(name_CN)
     SCC_AD <- threadr::read_rdata(name_AD)
     
-      # Mean Average Normalization: TEST WHETHER THIS HELPS (!!)
-      
-      for (k in 1:nrow(SCC_CN)) {
+    #** Mean Average Normalization:  ----
     
-      temp <- SCC_CN[k, ]
-      mean <- mean(as.numeric(temp), na.rm = T)
-      SCC_CN[k, ] <- (temp/mean)
-      }
+    for (k in 1:nrow(SCC_CN)) {
   
-      for (k in 1:nrow(SCC_AD)) {
-      
-      temp <- SCC_AD[k, ]
-      mean <- mean(as.numeric(temp), na.rm = T)
-      SCC_AD[k, ] <- (temp/mean)
-      }
+    temp <- SCC_CN[k, ]
+    mean <- mean(as.numeric(temp), na.rm = T)
+    SCC_CN[k, ] <- (temp/mean)
+    }
+
+    for (k in 1:nrow(SCC_AD)) {
     
+    temp <- SCC_AD[k, ]
+    mean <- mean(as.numeric(temp), na.rm = T)
+    SCC_AD[k, ] <- (temp/mean)
+    }
     
-    ### ########################################################## ###
-    #####        *OTHER PARAMETERS FOR SCC ESTIMATION*            ####
-    ### ########################################################## ###
-    
+    #** Other parameters for SCC computation ----
     # Following Wang et al's recomendations:
     
     d.est = 5 # degree of spline for mean function  5
@@ -336,23 +311,25 @@ for (i in 1:length(region)) {
     r = 1 # smoothing parameter  1
     lambda = 10^{seq(-6,3,0.5)} # penalty parameters
     alpha.grid = c(0.10,0.05,0.01) # vector of confidence levels
-    x <- rep(1:91, each = 109, length.out = 9919) 
-    y <- rep(1:109,length.out = 9919)
-    Z <- cbind(as.matrix(x),as.matrix(y)); Z
+
+    #** Construction of SCC's ----
     
-    ### ########################################################## ###
-    #####               *CONSTRUCTION OF SCC'S*                   ####
-    ### ########################################################## ###
+    setwd(paste0("~/GitHub/SCCneuroimage/z", as.character(param.z), "/results"))
     
-    setwd(paste0("C:/Users/Juan A. Arias/Desktop/Simulaciones PET CHUS/SCC matrix/z", as.character(param.z), "/SCC", param.z, "results"))
+    if (file.exists(paste0("SCC_COMP_", region[i], "_", roi[j] ,".RData")) == TRUE)  {
+      
+      print("Nice!")
+      
+    } else  {
     
-    SCC_COMP = scc.image(  Ya = SCC_AD, Yb = SCC_CN, Z = Z, d.est = d.est, d.band = d.band, r = r,
+      SCC_COMP = scc.image(Ya = SCC_AD, Yb = SCC_CN, Z = Z, d.est = d.est, d.band = d.band, r = r,
                            V.est.a = V.est, Tr.est.a = Tr.est,
                            V.band.a = V.band, Tr.band.a = Tr.band,
                            penalty = TRUE, lambda = lambda, alpha.grid = alpha.grid,
                            adjust.sigma = TRUE)    
-    
-    save(SCC_COMP, file = paste0("SCC_COMP_", region[i], "_", roi[j] ,".RData"))
+      save(SCC_COMP, file = paste0("SCC_COMP_", region[i], "_", roi[j] ,".RData"))
+      
+    }
     
   }
   
