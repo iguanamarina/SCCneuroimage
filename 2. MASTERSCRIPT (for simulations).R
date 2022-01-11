@@ -120,11 +120,11 @@ head(coord[[3]],10); points(coord[[3]]) # second hole
 
 #* Get coordinates in pckg Triangulation format: ----
 
-VT = TriMesh(coord[[1]], n = 15) 
+VT = TriMesh(coord[[1]], n = 8) 
 
 # n = Triangulation degree of fineness (8 is recommended)
-# However, I use n = 15 because Arias-López et al. (2021) suggests computing times for
-# higher n values are sensible
+# However, higher values can be used as Arias-López et al. (2021) suggests computing times for
+# higher n values are still low and sensible.
 
 head(VT$V,10);head(VT$Tr,10) 
 
@@ -318,7 +318,8 @@ for (i in 1:length(region)) {
     
     if (file.exists(paste0("SCC_COMP_", region[i], "_", roi[j] ,".RData")) == TRUE)  {
       
-      print("Nice!")
+      print("Nice!") # I already have this files so this way the lines below (very time-consuming)
+                     # run only if these files are not present at current folder
       
     } else  {
     
@@ -336,60 +337,35 @@ for (i in 1:length(region)) {
 }
 
 
-# This function will be necessary:
-
-    
-my_points <- function(aa){
-  
-  Z.band <- matrix(aa$Z.band, ncol = 2) # Positions
-  z1 <- unique(Z.band[,1]); z2 <- unique(Z.band[,2]); # Separated positions
-  n1 <- length(z1); n2 <- length(z2) # Lengths of those positions
-  scc <- matrix(NA,n1*n2,2) # Matrix with value of that SCC in that position
-  ind.inside.band <- aa$ind.inside.cover # Keep only regions inside triangulation
-  scc[ind.inside.band,] <- aa$scc[,,2] # Assign SCC to those areas (IMPORTANT_: 1,2,3 FOR DIFFERENT ALPHAS)
-  scc.limit <- c(min(scc[,1],na.rm = TRUE), max(scc[,2],na.rm = TRUE)) # LIMITS: minimum of inferior, maximum of superior
-   
-  scc.l.mtx <- matrix(scc[,1], nrow = n2, ncol = n1) # Lower SCC for each location. 
-  scc.u.mtx <- matrix(scc[,2], nrow = n2, ncol = n1) # Upper SCC for each location.
-  scc.l.mtx[scc.l.mtx < 0] = NA 
-  # The ones that work just fine are substituded by a NA as we don't want to represent them, only positive LowerSCCs are represented
-  scc.u.mtx[scc.u.mtx > 0] = NA 
-  # The ones that work just fine are substituded by a NA as we don't want to represent them, only positive UpperSCCs are represented
-  
-  points.P <- which(scc.l.mtx > 0, arr.ind = TRUE) # Points where mean difference is positive (first image is stronger)
-  points.N <- which(scc.u.mtx < 0, arr.ind = TRUE) # Points where mean difference is negative (second image is stronger)
-  
-  pointers <- list(points.P, points.N)
-  print(pointers)  
-}
+####
+# PART 6: SCC EVALUATION ----
+####
 
 
-### ########################################################## ###
-#####                 SCRIPT  FOR  EVALUATION                 ####
-### ########################################################## ###
-
-library(gamair);library(oro.nifti);library(memisc);library(devtools);library(remotes);library(readr);library(imager);library(itsadug);library(ggplot2);library(contoureR);library(fields);library(BPST);library(Triangulation);library(ImageSCC); library(tidyr); library(dplyr);library(stringr)
-
-
-### ########################################################## ###
-#####             THESE ARE THE THEORETICAL ROIs              ####
-### ########################################################## ###
+# This section requires loading the TRUE points with differences in PET activity to test
+# against them. These are called ROI_something. Basically, we will get the TRUE POINTS
+# and then test them against SCC, SPM, SPMstrong... and get some metrics on each method's afficiency.
+# Enjoy.
 
 
-# TUNING PARAMETERS - Combinatory of regions and induced hypoactivities:
+#* Theoretical ROIs ----
 
 region <- c("w32", "w79", "w214", "w271", "w413", "wroiAD")
-number <- paste0("C", 1:25)
 
+# With this loop we get a series of tables with the exact ROI points as provided by
+# Santiago de Compostela's General Hospital:
 
-# DOUBLE LOOP REGION-ROI: with this we get a series of tables with the exact ROI points as provided by CHUS.
-
-for (i in 1:length(region)) { # RUN JUST THE FIRST TIME
+for (i in 1:length(region)) { 
 
     for (k in 1:length(number)) {
 
-      setwd("C:/Users/Juan A. Arias/Desktop/Simulaciones PET CHUS/roisNormalizadas")
+      setwd("~/GitHub/SCCneuroimage/roisNormalizadas/tables")
       
+      if (file.exists(paste0("ROItable_", region[i], "_", number[k], ".RDS")) == TRUE)  {
+         print("Nice!")
+        } else  {
+          
+      setwd("~/GitHub/SCCneuroimage/roisNormalizadas")
       roi_table <- data.frame(group = integer(),
                               z = integer(),
                               x = integer(),
@@ -400,7 +376,7 @@ for (i in 1:length(region)) { # RUN JUST THE FIRST TIME
       # Clean data for that file:
       temporal <- f.clean(name)
       # Add meta-data:
-      group <- rep(paste0(as.character(region[i]), "_number", number[k]), length.out = 9919)
+      group <- rep(paste0(as.character(region[i]), "_number", number[k]), length.out = nrow(Z))
       # Merge with main data.frame:
       temporal <- cbind(group, temporal)
       # Solve problem with zeros and NA's:
@@ -410,32 +386,33 @@ for (i in 1:length(region)) { # RUN JUST THE FIRST TIME
       # Final:
       roi_table <- rbind(roi_table, temporal)
 
-      setwd("C:/Users/Juan A. Arias/Desktop/Simulaciones PET CHUS/roisNormalizadas/tables")
+      setwd("~/GitHub/SCCneuroimage/roisNormalizadas/tables")
       saveRDS(roi_table, file = paste0("ROItable_", region[i], "_", number[k], ".RDS"))
-  
+        
+      }
+      
     }
   
   }
 
 
-  # Theoretical Points (True according to ROIs):
+#* Theoretical Points (True according to ROIs) ----
   
-
-ROI_data <- list() # Cargar las databases
+ROI_data <- list() # First load data
 
   for (i in 1:length(region)) {
     for (k in 1:length(number)) {
       
-    setwd("C:/Users/Juan A. Arias/Desktop/Simulaciones PET CHUS/roisNormalizadas/tables")
+    setwd("~/GitHub/SCCneuroimage/roisNormalizadas/tables")
     ROI_data[[paste0(as.character(region[i]), "_", as.character(number[k]))]] <- readRDS(
-      paste0("C:/Users/Juan A. Arias/Desktop/Simulaciones PET CHUS/roisNormalizadas/tables/ROItable_", 
+      paste0("~/GitHub/SCCneuroimage/roisNormalizadas/tables/ROItable_", 
              region[i], "_", number[k], ".RDS"))
   
     }
   }  
 
 
-T_points <- list() # Theoretical points filtered by Z 
+T_points <- list() # Now filter by Z 
 
 for (i in 1:length(region)) {
   
@@ -451,18 +428,23 @@ for (i in 1:length(region)) {
 rm(ROI_data) # No longer necessary
 
 
-### ############################################################################# ###
-#####             THESE ARE THE HYPOTHETICAL POINTS DETECTED BY SCCs             #### 
-### ############################################################################# ###
+# Hypothetical points according to SCCs ---- 
 
-roi <- c(1, 2, 4, 6, 8)
+
+  # Hypothetical points and sens/esp for different methods go all together
+  # in a big loop. First, you need to perform the analysis with SPM and all the 
+  # different setups and export SPM results to a binary file named "binary.nii"
+  # Pay attention to the folders so that you understand where things come from.
+
 
 SCC_vs_SPM_complete <-   data.frame(method = integer(),
                                     region = integer(),
                                     roi = integer(),
                                     number = integer(),
                                     sens = integer(),
-                                    esp = integer())
+                                    esp = integer(),
+                                    PPV = integer(),
+                                    NPV = integer())
 
 SCC_vs_SPM <- data.frame(method = integer(),
                          region = integer(),
@@ -470,12 +452,19 @@ SCC_vs_SPM <- data.frame(method = integer(),
                          sensMEAN = integer(),
                          sensSD = integer(),
                          espMEAN = integer(),
-                         espSD = integer())
+                         espSD = integer(),
+                         PPVMEAN = integer(),
+                         PPVSD = integer(),
+                         NPVMEAN = integer(),
+                         NPVSD = integer())
+
+# These above are the final tables
 
 x <- rep(1:91, each = 109, length.out = 9919) 
 y <- rep(1:109, length.out = 9919)
 total.coords <- data.frame(y, x) ###!!!!!
 total.coords <- unite(as.data.frame(total.coords), newcol, c(y, x), remove = T)
+rm(x); rm(y)
 
 for (k in 1:length(roi)) {
   
@@ -485,29 +474,26 @@ for (k in 1:length(roi)) {
   
   H_points <- list()
   
-  setwd(paste0("C:/Users/Juan A. Arias/Desktop/Simulaciones PET CHUS/SCC matrix/z", as.numeric(param.z) ,"/SCC", as.numeric(param.z), "results"))
+  setwd(paste0("~/GitHub/SCCneuroimage/z", as.character(param.z), "/results"))
   
   for (i in 1:length(region)) {
   
     load(paste0("SCC_COMP_", region[i], "_", roi[k], ".RData"))
-    H_points[[as.character(region[i])]] <- my_points(SCC_COMP)[[1]] 
+    H_points[[as.character(region[i])]] <- my_points(SCC_COMP, 2)[[1]] 
     H_points[[as.character(region[i])]] <- unite(as.data.frame(H_points[[i]]), newcol, c(row, col), remove = T)
     
   }
      
   rm(list = ls(pattern = "^SCC_COMP")) # Just beautiful
   
-  
-  ### ########################################################## ###
-  #####                   SENS/ESP   FOR   SCC                  ####
-  ### ########################################################## ###
-  
+  #* SENS/ESP for SCC ----
+
   region <- c("w32", "w79", "w214", "w271", "w413", "wroiAD")
   names(H_points)[6] <- "wroiAD" # because of reasons
   
   for (i in 1:length(region)) {  
     
-    SCC_sens_esp <- data.frame(region = integer(), group = integer(), sens = integer(), esp = integer())
+    SCC_sens_esp <- data.frame(region = integer(), group = integer(), sens = integer(), esp = integer(), PPV = integer(), NPV = integer())
     
     for (j in 1:length(number)) {
     
@@ -527,16 +513,35 @@ for (k in 1:length(roi)) {
       specificitySCC <- nrow(anti_inters)/nrow(true_neg)*100
       # p(correctly identify healthy pixel)
     
-      temp <- data.frame(region = region[i], group = number[j], sens = sensibilitySCC, esp = specificitySCC)  
+      # PPV	= TP/(TP+FP) -> probability of having the disease after a positive test result
+      
+      FalsePositive <- inner_join(H_points[[as.character(region[i])]], 
+                                  true_neg)
+      FalseNegative <- inner_join(hypo_neg, 
+                                  T_points[[paste0(as.character(region[i]), "_", as.character(number[j]))]])  
+      
+      PPV = (nrow(inters)/(nrow(inters) + nrow(FalsePositive)))*100
+      
+      # NPV	= TN/(FN+TN) -> probability of not having the disease after a negative test result
+      
+      NPV = (nrow(anti_inters)/(nrow(anti_inters) + nrow(FalseNegative)))*100
+      
+      temp <- data.frame(region = region[i], group = number[j], sens = sensibilitySCC, esp = specificitySCC, PPV = integer(), NPV = integer())  
       SCC_sens_esp <- rbind(SCC_sens_esp, temp)
       
     }
     
     means <- data.frame(region = region[i], group = "MEAN", sens = mean(SCC_sens_esp$sens, na.rm = TRUE), 
-                                                            esp = mean(SCC_sens_esp$esp, na.rm = TRUE))
+                                                            esp = mean(SCC_sens_esp$esp, na.rm = TRUE),
+                                                            PPV = mean(SCC_sens_esp$PPV, na.rm = TRUE),
+                                                            NPV = mean(SCC_sens_esp$NPV, na.rm = TRUE))
     sds <- data.frame(region = region[i], group = "SD", sens = sd(SCC_sens_esp$sens, na.rm = TRUE), 
-                                                        esp = sd(SCC_sens_esp$esp, na.rm = TRUE))
+                                                        esp = sd(SCC_sens_esp$esp, na.rm = TRUE),
+                                                        PPV = sd(SCC_sens_esp$PPV, na.rm = TRUE),
+                                                        NPV = sd(SCC_sens_esp$NPV, na.rm = TRUE))
     SCC_sens_esp <- rbind(SCC_sens_esp, means, sds)
+    
+    ### ME QUEDÉ AQUII!!!!!
     
     setwd(paste0("C:/Users/Juan A. Arias/Desktop/Simulaciones PET CHUS/Preliminary results/z", as.numeric(param.z), "/ROI", roi[k]))
     
