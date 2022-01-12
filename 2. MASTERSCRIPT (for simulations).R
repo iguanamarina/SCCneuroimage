@@ -33,8 +33,8 @@ memory.limit(30000000)     # This is needed on some PCs to increase memory allow
 
 #* Install Packgs ----
 
-install.packages("remotes")
-remotes::install_github("skgrange/threadr")
+# install.packages("remotes")
+# remotes::install_github("skgrange/threadr")
 
 #* Load up packages ---- 
 
@@ -428,7 +428,7 @@ for (i in 1:length(region)) {
 rm(ROI_data) # No longer necessary
 
 
-# Hypothetical points according to SCCs ---- 
+#* Hypothetical points according to SCCs ---- 
 
 
   # Hypothetical points and sens/esp for different methods go all together
@@ -468,8 +468,6 @@ rm(x); rm(y)
 
 for (k in 1:length(roi)) {
   
-  # Hypotetical Points (according to SCCs): 
-  
   region <- c("w32", "w79", "w214", "w271", "w413", "roiAD")
   
   H_points <- list()
@@ -479,7 +477,7 @@ for (k in 1:length(roi)) {
   for (i in 1:length(region)) {
   
     load(paste0("SCC_COMP_", region[i], "_", roi[k], ".RData"))
-    H_points[[as.character(region[i])]] <- my_points(SCC_COMP, 2)[[1]] 
+    H_points[[as.character(region[i])]] <- my_points(SCC_COMP, 2)[[1]] # 2 = alpha 0'95
     H_points[[as.character(region[i])]] <- unite(as.data.frame(H_points[[i]]), newcol, c(row, col), remove = T)
     
   }
@@ -493,7 +491,7 @@ for (k in 1:length(roi)) {
   
   for (i in 1:length(region)) {  
     
-    SCC_sens_esp <- data.frame(region = integer(), group = integer(), sens = integer(), esp = integer(), PPV = integer(), NPV = integer())
+    SCC_sens_esp <- data.frame(region = integer(), group = integer(), sens = integer(), esp = integer(), ppv = integer(), npv = integer())
     
     for (j in 1:length(number)) {
     
@@ -526,30 +524,27 @@ for (k in 1:length(roi)) {
       
       NPV = (nrow(anti_inters)/(nrow(anti_inters) + nrow(FalseNegative)))*100
       
-      temp <- data.frame(region = region[i], group = number[j], sens = sensibilitySCC, esp = specificitySCC, PPV = integer(), NPV = integer())  
+      temp <- data.frame(region = region[i], group = number[j], sens = sensibilitySCC, esp = specificitySCC, ppv = PPV, npv = NPV)  
       SCC_sens_esp <- rbind(SCC_sens_esp, temp)
       
     }
     
     means <- data.frame(region = region[i], group = "MEAN", sens = mean(SCC_sens_esp$sens, na.rm = TRUE), 
                                                             esp = mean(SCC_sens_esp$esp, na.rm = TRUE),
-                                                            PPV = mean(SCC_sens_esp$PPV, na.rm = TRUE),
-                                                            NPV = mean(SCC_sens_esp$NPV, na.rm = TRUE))
+                                                            ppv = mean(SCC_sens_esp$ppv, na.rm = TRUE),
+                                                            npv = mean(SCC_sens_esp$npv, na.rm = TRUE))
     sds <- data.frame(region = region[i], group = "SD", sens = sd(SCC_sens_esp$sens, na.rm = TRUE), 
                                                         esp = sd(SCC_sens_esp$esp, na.rm = TRUE),
-                                                        PPV = sd(SCC_sens_esp$PPV, na.rm = TRUE),
-                                                        NPV = sd(SCC_sens_esp$NPV, na.rm = TRUE))
+                                                        ppv = sd(SCC_sens_esp$ppv, na.rm = TRUE),
+                                                        npv = sd(SCC_sens_esp$npv, na.rm = TRUE))
     SCC_sens_esp <- rbind(SCC_sens_esp, means, sds)
     
-    ### ME QUEDÉ AQUII!!!!!
-    
-    setwd(paste0("C:/Users/Juan A. Arias/Desktop/Simulaciones PET CHUS/Preliminary results/z", as.numeric(param.z), "/ROI", roi[k]))
-    
+    setwd(paste0("~/GitHub/SCCneuroimage/z", as.character(param.z), "/results", "/ROI", roi[k]))
     write_csv(SCC_sens_esp, paste0("sens_esp_SCC_", region[i], "_", roi[k], ".csv"), na = "NA", append = FALSE)
     
   }
   
-  setwd(paste0("C:/Users/Juan A. Arias/Desktop/Simulaciones PET CHUS/Preliminary results/z", as.numeric(param.z), "/ROI", roi[k]))
+  setwd(paste0("~/GitHub/SCCneuroimage/z", as.character(param.z), "/results", "/ROI", roi[k]))
   
   sens_esp_SCC_w32 <- read_csv(paste0("sens_esp_SCC_w32_", roi[k], ".csv"), na = "NA")
   sens_esp_SCC_w79 <- read_csv(paste0("sens_esp_SCC_w79_", roi[k], ".csv"), na = "NA")
@@ -558,11 +553,8 @@ for (k in 1:length(roi)) {
   sens_esp_SCC_w413 <- read_csv(paste0("sens_esp_SCC_w413_", roi[k], ".csv"), na = "NA")
   sens_esp_SCC_wroiAD <- read_csv(paste0("sens_esp_SCC_wroiAD_", roi[k], ".csv"), na = "NA")
   
-  
-  ### ########################################################## ###
-  #####                  SENS/ESP  FOR  SPM                     #### 
-  ### ########################################################## ###
-  
+  # AQUI ME QUEDÉ!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! ----
+  #* SENS/ESP for SPM ----
   
   for (i in 1:length(region)) {  
     
