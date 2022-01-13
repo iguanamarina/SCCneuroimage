@@ -453,10 +453,10 @@ SCC_vs_SPM <- data.frame(method = integer(),
                          sensSD = integer(),
                          espMEAN = integer(),
                          espSD = integer(),
-                         PPVMEAN = integer(),
-                         PPVSD = integer(),
-                         NPVMEAN = integer(),
-                         NPVSD = integer())
+                         ppvMEAN = integer(),
+                         ppvSD = integer(),
+                         npvMEAN = integer(),
+                         npvSD = integer())
 
 # These above are the final tables
 
@@ -465,6 +465,9 @@ y <- rep(1:109, length.out = 9919)
 total.coords <- data.frame(y, x) ###!!!!!
 total.coords <- unite(as.data.frame(total.coords), newcol, c(y, x), remove = T)
 rm(x); rm(y)
+
+
+# NOW FOR REAL, FASTEN YOUR SEAT BELT, THIS IS GOING TO BE AS HARD AND FAST AS A TECHNNO RAVE 
 
 for (k in 1:length(roi)) {
   
@@ -552,18 +555,21 @@ for (k in 1:length(roi)) {
   sens_esp_SCC_w271 <- read_csv(paste0("sens_esp_SCC_w271_", roi[k], ".csv"), na = "NA")
   sens_esp_SCC_w413 <- read_csv(paste0("sens_esp_SCC_w413_", roi[k], ".csv"), na = "NA")
   sens_esp_SCC_wroiAD <- read_csv(paste0("sens_esp_SCC_wroiAD_", roi[k], ".csv"), na = "NA")
-  
-  # AQUI ME QUEDÉ!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! ----
+ 
   #* SENS/ESP for SPM ----
+  
+  # This part requires you to have previously performed these analysis in SPM
+  # using an uncorrected p-value of 0'05 and no pixel threshold and exporting
+  # a binary file ("binary.nii") into folders following the below defined name format
   
   for (i in 1:length(region)) {  
     
-    setwd(paste0("C:/Users/Juan A. Arias/Desktop/Simulaciones PET CHUS/SPM/z", as.numeric(param.z), "/ROI", i, "_", region[i], "_0", roi[k]))
+    setwd(paste0("~/GitHub/SCCneuroimage/z", as.numeric(param.z), "/SPM", "/ROI", i, "_", region[i], "_0", roi[k]))
     binary <- f.clean("binary.nii")
     H_points_SPM <- binary[binary$z == as.numeric(param.z) & binary$pet == 1, 2:3]
     H_points_SPM <- unite(as.data.frame(H_points_SPM), newcol, c(y, x), remove = T)
     
-    SPM_sens_esp <- data.frame(region = integer(), group = integer(), sens = integer(), esp = integer())
+    SPM_sens_esp <- data.frame(region = integer(), group = integer(), sens = integer(), esp = integer(), ppv = integer(), npv = integer())
     
     for (j in 1:length(number)) {
     
@@ -583,24 +589,41 @@ for (k in 1:length(roi)) {
       specificitySPM <- nrow(anti_inters)/nrow(true_neg)*100
       # p(correctly identify healthy pixel)
       
-      temp <- data.frame(region = region[i], group = number[j], sens = sensibilitySPM, esp = specificitySPM)  
+      # PPV	= TP/(TP+FP) -> probability of having the disease after a positive test result
+      
+      FalsePositive <- inner_join(H_points_SPM, 
+                                  true_neg)
+      FalseNegative <- inner_join(hypo_neg, 
+                                  T_points[[paste0(as.character(region[i]), "_", as.character(number[j]))]])  
+      
+      PPV = (nrow(inters)/(nrow(inters) + nrow(FalsePositive)))*100
+      
+      # NPV	= TN/(FN+TN) -> probability of not having the disease after a negative test result
+      
+      NPV = (nrow(anti_inters)/(nrow(anti_inters) + nrow(FalseNegative)))*100
+      
+      temp <- data.frame(region = region[i], group = number[j], sens = sensibilitySPM, esp = specificitySPM, ppv = PPV, npv = NPV)  
       SPM_sens_esp <- rbind(SPM_sens_esp, temp)
   
     }
     
     means <- data.frame(region = region[i], group = "MEAN", sens = mean(SPM_sens_esp$sens, na.rm = TRUE), 
-                                                            esp = mean(SPM_sens_esp$esp, na.rm = TRUE))
+                                                            esp = mean(SPM_sens_esp$esp, na.rm = TRUE),
+                                                            ppv = mean(SPM_sens_esp$ppv, na.rm = TRUE),
+                                                            npv = mean(SPM_sens_esp$npv, na.rm = TRUE))
     sds <- data.frame(region = region[i], group = "SD", sens = sd(SPM_sens_esp$sens, na.rm = TRUE), 
-                                                        esp = sd(SPM_sens_esp$esp, na.rm = TRUE))
+                                                        esp = sd(SPM_sens_esp$esp, na.rm = TRUE),
+                                                        ppv = sd(SPM_sens_esp$ppv, na.rm = TRUE),
+                                                        npv = sd(SPM_sens_esp$npv, na.rm = TRUE))
     SPM_sens_esp <- rbind(SPM_sens_esp, means, sds)
   
-    setwd(paste0("C:/Users/Juan A. Arias/Desktop/Simulaciones PET CHUS/Preliminary results/z", as.numeric(param.z), "/ROI", roi[k]))
+    setwd(paste0("~/GitHub/SCCneuroimage/z", as.character(param.z), "/results", "/ROI", roi[k]))
     
     write_csv(SPM_sens_esp, paste0("sens_esp_SPM_", region[i], "_", roi[k], ".csv"), na = "NA", append = FALSE)
   
   }
   
-  setwd(paste0("C:/Users/Juan A. Arias/Desktop/Simulaciones PET CHUS/Preliminary results/z", as.numeric(param.z), "/ROI", roi[k]))
+  setwd(paste0("~/GitHub/SCCneuroimage/z", as.character(param.z), "/results", "/ROI", roi[k]))
   
   sens_esp_SPM_w32 <- read_csv(paste0("sens_esp_SPM_w32_", roi[k], ".csv"), na = "NA")
   sens_esp_SPM_w79 <- read_csv(paste0("sens_esp_SPM_w79_", roi[k], ".csv"), na = "NA")
@@ -610,19 +633,24 @@ for (k in 1:length(roi)) {
   sens_esp_SPM_wroiAD <- read_csv(paste0("sens_esp_SPM_wroiAD_", roi[k], ".csv"), na = "NA")
   
   
-  ### ########################################################## ###
-  #####                SENS/ESP  FOR  STRONG SPM                ####     FWE 0'05 + 100 voxels threshold
-  ### ########################################################## ###
+
+     
+  #* SENS/ESP for strong SPM (FWE 0'05 + 100 voxels threshold) ----
+  
+  # Same as the previous section, here you need to carry out SPM analysis 
+  # by yourself and then save the resulting binary file as "binary.nii" in 
+  # folders following below-shown path structure. In this case, SPM analysis
+  # is performed with FWE 0'05 and 100 voxels of threshold.
   
   
   for (i in 1:length(region)) {  
     
-    setwd(paste0("C:/Users/Juan A. Arias/Desktop/Simulaciones PET CHUS/SPMstrong/z", as.numeric(param.z), "/ROI", i, "_", region[i], "_0", roi[k]))
+    setwd(paste0("~/GitHub/SCCneuroimage/z", as.numeric(param.z), "/SPMstrong", "/ROI", i, "_", region[i], "_0", roi[k]))
     binary <- f.clean("binary.nii")
     H_points_SPMstrong <- binary[binary$z == as.numeric(param.z) & binary$pet == 1, 2:3]
     H_points_SPMstrong <- unite(as.data.frame(H_points_SPMstrong), newcol, c(y, x), remove = T)
     
-    SPMstrong_sens_esp <- data.frame(region = integer(), group = integer(), sens = integer(), esp = integer())
+    SPMstrong_sens_esp <- data.frame(region = integer(), group = integer(), sens = integer(), esp = integer(), ppv = integer(), npv = integer())
     
     for (j in 1:length(number)) {
     
@@ -641,24 +669,42 @@ for (k in 1:length(roi)) {
       specificitySPMstrong <- nrow(anti_inters)/nrow(true_neg)*100
       # p(correctly identify healthy pixel)
       
-      temp <- data.frame(region = region[i], group = number[j], sens = sensibilitySPMstrong, esp = specificitySPMstrong)  
+      # PPV	= TP/(TP+FP) -> probability of having the disease after a positive test result
+      
+      FalsePositive <- inner_join(H_points_SPMstrong, 
+                                  true_neg)
+      FalseNegative <- inner_join(hypo_neg, 
+                                  T_points[[paste0(as.character(region[i]), "_", as.character(number[j]))]])  
+      
+      PPV = (nrow(inters)/(nrow(inters) + nrow(FalsePositive)))*100
+      
+      # NPV	= TN/(FN+TN) -> probability of not having the disease after a negative test result
+      
+      NPV = (nrow(anti_inters)/(nrow(anti_inters) + nrow(FalseNegative)))*100
+      
+      
+      temp <- data.frame(region = region[i], group = number[j], sens = sensibilitySPMstrong, esp = specificitySPMstrong, ppv = PPV, npv = NPV)  
       SPMstrong_sens_esp <- rbind(SPMstrong_sens_esp, temp)
   
     }
     
     means <- data.frame(region = region[i], group = "MEAN", sens = mean(SPMstrong_sens_esp$sens, na.rm = TRUE), 
-                                                            esp = mean(SPMstrong_sens_esp$esp, na.rm = TRUE))
+                                                            esp = mean(SPMstrong_sens_esp$esp, na.rm = TRUE),
+                                                            ppv = mean(SPMstrong_sens_esp$ppv, na.rm = TRUE),
+                                                            npv = mean(SPMstrong_sens_esp$npv, na.rm = TRUE))
     sds <- data.frame(region = region[i], group = "SD", sens = sd(SPMstrong_sens_esp$sens, na.rm = TRUE), 
-                                                        esp = sd(SPMstrong_sens_esp$esp, na.rm = TRUE))
+                                                        esp = sd(SPMstrong_sens_esp$esp, na.rm = TRUE),
+                                                        ppv = sd(SPMstrong_sens_esp$ppv, na.rm = TRUE),
+                                                        npv = sd(SPMstrong_sens_esp$npv, na.rm = TRUE))
     SPMstrong_sens_esp <- rbind(SPMstrong_sens_esp, means, sds)
   
-    setwd(paste0("C:/Users/Juan A. Arias/Desktop/Simulaciones PET CHUS/Preliminary results/z", as.numeric(param.z), "/ROI", roi[k]))
+    setwd(paste0("~/GitHub/SCCneuroimage/z", as.character(param.z), "/results", "/ROI", roi[k]))
     
     write_csv(SPMstrong_sens_esp, paste0("sens_esp_SPMstrong_", region[i], "_", roi[k], ".csv"), na = "NA", append = FALSE)
   
   }
   
-  setwd(paste0("C:/Users/Juan A. Arias/Desktop/Simulaciones PET CHUS/Preliminary results/z", as.numeric(param.z), "/ROI", roi[k]))
+  setwd(paste0("~/GitHub/SCCneuroimage/z", as.character(param.z), "/results", "/ROI", roi[k]))
   
   sens_esp_strongSPM_w32 <- read_csv(paste0("sens_esp_SPMstrong_w32_", roi[k], ".csv"), na = "NA")
   sens_esp_strongSPM_w79 <- read_csv(paste0("sens_esp_SPMstrong_w79_", roi[k], ".csv"), na = "NA")
@@ -668,7 +714,7 @@ for (k in 1:length(roi)) {
   sens_esp_strongSPM_wroiAD <- read_csv(paste0("sens_esp_SPMstrong_wroiAD_", roi[k], ".csv"), na = "NA")
   
   
-  ## Create a Complete List: 
+  #* Create a Complete List: ----
   
   listSCC <- ls(pattern = "^sens_esp_SCC")
   
@@ -677,7 +723,7 @@ for (k in 1:length(roi)) {
     data <- get(listSCC[[i]])[1:25, ]
     method <- rep("SCC", times = 25)
     Roi <- rep(as.character(roi[k]), times = 25) 
-    tempSCC <- cbind(as.data.frame(method), data[, 1], as.data.frame(Roi), data[, 2:4])  
+    tempSCC <- cbind(as.data.frame(method), data[, 1], as.data.frame(Roi), data[, 2:6])  
     
     SCC_vs_SPM_complete <- rbind(SCC_vs_SPM_complete, tempSCC)
   
@@ -691,7 +737,7 @@ for (k in 1:length(roi)) {
     data <- get(listSPM[[i]])[1:25, ]
     method <- rep("SPM", times = 25)
     Roi <- rep(as.character(roi[k]), times = 25)  
-    tempSPM <- cbind(as.data.frame(method), data[, 1], as.data.frame(Roi), data[, 2:4])  
+    tempSPM <- cbind(as.data.frame(method), data[, 1], as.data.frame(Roi), data[, 2:6])  
     
     SCC_vs_SPM_complete <- rbind(SCC_vs_SPM_complete, tempSPM)
   
@@ -705,14 +751,14 @@ for (k in 1:length(roi)) {
     data <- get(listSPMstrong[[i]])[1:25, ]
     method <- rep("SPMstrong", times = 25)
     Roi <- rep(as.character(roi[k]), times = 25)  
-    tempSPMstrong <- cbind(as.data.frame(method), data[, 1], as.data.frame(Roi), data[, 2:4])  
+    tempSPMstrong <- cbind(as.data.frame(method), data[, 1], as.data.frame(Roi), data[, 2:6])  
     
     SCC_vs_SPM_complete <- rbind(SCC_vs_SPM_complete, tempSPMstrong)
   
   }
   
   
-  ## Create a Final Reduced List:
+  #* Create a Final Reduced List: ----
   
   
   for (i in 1:length(listSCC)) {
@@ -724,7 +770,11 @@ for (k in 1:length(roi)) {
                        sensMEAN = data$sens[1], 
                        sensSD = data$sens[2], 
                        espMEAN = data$esp[1], 
-                       espSD = data$esp[2])    
+                       espSD = data$esp[2],
+                       ppvMEAN = data$ppv[1],
+                       ppvSD = data$ppv[2],
+                       npvMEAN = data$npv[1],
+                       npvSD = data$npv[2])    
     
     SCC_vs_SPM <- rbind(SCC_vs_SPM, temp)
   
@@ -740,7 +790,11 @@ for (k in 1:length(roi)) {
                        sensMEAN = data$sens[1], 
                        sensSD = data$sens[2], 
                        espMEAN = data$esp[1], 
-                       espSD = data$esp[2])    
+                       espSD = data$esp[2],
+                       ppvMEAN = data$ppv[1],
+                       ppvSD = data$ppv[2],
+                       npvMEAN = data$npv[1],
+                       npvSD = data$npv[2]) 
     
     SCC_vs_SPM <- rbind(SCC_vs_SPM, temp)
   
@@ -756,7 +810,11 @@ for (k in 1:length(roi)) {
                        sensMEAN = data$sens[1], 
                        sensSD = data$sens[2], 
                        espMEAN = data$esp[1], 
-                       espSD = data$esp[2])    
+                       espSD = data$esp[2],
+                       ppvMEAN = data$ppv[1],
+                       ppvSD = data$ppv[2],
+                       npvMEAN = data$npv[1],
+                       npvSD = data$npv[2])    
     
     SCC_vs_SPM <- rbind(SCC_vs_SPM, temp)
   
@@ -767,137 +825,10 @@ for (k in 1:length(roi)) {
 View(SCC_vs_SPM)
 View(SCC_vs_SPM_complete)
 
-setwd(paste0("C:/Users/Juan A. Arias/Desktop/Simulaciones PET CHUS/Preliminary results/z", as.numeric(param.z)))
+setwd(paste0("~/GitHub/SCCneuroimage/z", as.numeric(param.z), "/results"))
 saveRDS(SCC_vs_SPM, file = paste0("SCC_vs_SPM", ".RDS"))
 saveRDS(SCC_vs_SPM_complete, file = paste0("SCC_vs_SPM_complete", ".RDS"))
 
-
-### ########################################################## ###
-#####               SCRIPT  FOR  VISUALIZATION                ####
-### ########################################################## ###
-
-require(ggplot2)
-
-setwd(paste0("C:/Users/Juan A. Arias/Desktop/Simulaciones PET CHUS/Preliminary results/z", as.numeric(param.z)))
-referencia <- readRDS(paste0("C:/Users/Juan A. Arias/Desktop/Simulaciones PET CHUS/Preliminary results/z", as.numeric(param.z),"/SCC_vs_SPM.RDS"))
-SCC_vs_SPM <- readRDS(paste0("C:/Users/Juan A. Arias/Desktop/Simulaciones PET CHUS/Preliminary results/z", as.numeric(param.z),"/SCC_vs_SPM_complete.RDS"))
-table <- SCC_vs_SPM # For commodity
-table$region <- factor(table$region,      
-                       levels = c("w32", "w79", "w214", "w271", "w413", "wroiAD"))
-table$Roi <- as.numeric(table$Roi)
-table$Roi <- table$Roi*10
-table$Roi <- as.character(table$Roi)
-attach(table)
-View(table)
-
-
-########################################################################################
-########################################################################################
-
-# Graph1: Sensibility for Only wroi for zoom analysis:
-
-graph1 <- ggplot(data = table[table$region == "wroiAD", ], 
-          aes(x = Roi, y = sens)) + 
-          geom_boxplot(aes(fill = method)) + 
-          xlab("Level of Induced Hypoactivity") + 
-          ylab("Sensibility") + ggtitle(paste0("Comparison of SCC's and SPM's levels of sensibility for wroiAD in z=", as.numeric(param.z))) +
-          guides(fill = guide_legend(title = "Legend"))
-
-graph1
-
-graph2 <- ggplot(data = table[table$region == "wroiAD", ], 
-          aes(x = Roi, y = esp)) + 
-          geom_boxplot(aes(fill = method)) + 
-          # coord_cartesian(ylim = c(0, 100)) +
-          xlab("Level of Induced Hypoactivity") + 
-          ylab("Especificity") + ggtitle(paste0("Comparison of SCC's and SPM's levels of especificity for wroiAD in z=", as.numeric(param.z))) +
-          guides(fill = guide_legend(title = "Legend"))
-
-graph2
-
-########################################################################################
-########################################################################################
-
-# Graph2: Sensibility for All regions & All ROIs
-
-graph2 <- ggplot(data = table, 
-                 aes(x = Roi, y = sens)) + 
-                 geom_boxplot(outlier.colour = NULL, aes(fill = method), outlier.size = 1) +
-                 xlab("Induced Hypoactivity (%)") + 
-                 ylab("Sensibility (%)") + 
-                 # ggtitle(paste0("Comparison of sensibility by regions in z=", as.numeric(param.z))) +
-                 guides(fill = guide_legend(title = "Methods")) + 
-                 facet_wrap( ~ region, nrow = 3) 
-
-graph2 
-
-
-graph22 <- ggplot(data = table, 
-                 aes(x = Roi, y = esp)) + 
-                 geom_boxplot(outlier.colour = NULL, aes(fill = method), outlier.size = 1) +
-                 xlab("Induced Hypoactivity (%)") + 
-                 ylab("Specificity (%)") + 
-                 # ggtitle(paste0("Comparison of especificity by regions in z=", as.numeric(param.z))) +
-                 guides(fill = guide_legend(title = "Methods")) + 
-                 facet_wrap( ~ region, nrow = 3) 
-
-graph22 
-
-
-########################################################################################
-########################################################################################
-
-# Academic Publication Theme:
-
-install.packages("envalysis")
-library(envalysis)
-graph22 + theme_publish() 
-
-ggsave(
-  "academic_plot.png",
-  plot = last_plot(),
-  scale = 2)
-
-ggsave(filename = "academic_plot.png", 
-       plot = last_plot(), 
-       width = 210, 
-       height = 297, 
-       units = "mm")
-
-
-
-# latex Table:
-
-library(tidyverse)
-
-referencia[referencia$region == "w32", ]$region <- as.character("ROI1")
-
-referencia[referencia$region == "w79", ]$region <- as.character("ROI2")
-
-referencia[referencia$region == "w214", ]$region <- as.character("ROI3")
-
-referencia[referencia$region == "w271", ]$region <- as.character("ROI4")
-
-referencia[referencia$region == "w413", ]$region <- as.character("ROI5")
-
-referencia[referencia$region == "wroiAD", ]$region <- as.character("ROI6")
-
-referencia$roi <- referencia$roi*10
-referencia$roi <- as.character(referencia$roi)
-
-for (i in 1:nrow(referencia)) {
-referencia$sens[i] <- paste0(round(as.numeric(referencia$sensMEAN[i]), 2), as.character("?"), round(as.numeric(referencia$sensSD[i]),2)) 
-}
-
-for (i in 1:nrow(referencia)) {
-referencia$esp[i] <- paste0(round(as.numeric(referencia$espMEAN[i]), 2), as.character("?"), round(as.numeric(referencia$espSD[i]),2)) 
-}
-
-
-my_data <- as_tibble(referencia)[ , c(1, 2, 3, 8, 9)]
-
-my_data <- my_data %>% arrange(method, region)
-
-print(xtable(my_data, type = "latex"), file = "my_table.tex")
-
-write.table(my_data, "ourTable.txt", quote=FALSE, eol="\\\\\n", sep=" & ")
+# NOW WE ALREADY HAVE THE TWO FILES WE NEED WITH SENSIBILITY, SPECIFICITY, 
+# POSITIVE PREDICTIVE VALUE, AND NEGATIVE PREDICTIVE VALUE. LET'S MOVE TO ANOTHER
+# SCRIPT FOR VISUALIZATION
