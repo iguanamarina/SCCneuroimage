@@ -56,9 +56,8 @@ table$Roi <- as.numeric(table$Roi)
 table$Roi <- table$Roi*10
 table$Roi <- as.character(table$Roi)
 attach(table)
-View(table) # Quite beautiful
 
-table2 <- rbind(table[table$method == "SCC", ], table[table$method == "SPM", ])
+table2 <- rbind(table[table$method == "SCC", ], table[table$method == "SPM", ]) # just two methods (no strongSPM)
 
 ####  
 # PART 3: Graphs and Plots ----------
@@ -67,71 +66,95 @@ table2 <- rbind(table[table$method == "SCC", ], table[table$method == "SPM", ])
 
 #* Graph 1 & Graph 2: Sens & Esp for wROI ----
 
-graph1 <- ggplot(data = table[table$region == "wroiAD", ], 
-          aes(x = Roi, y = sens)) + 
+setwd(paste0("~/GitHub/SCCneuroimage/z", as.numeric(param.z), "/Figures")) 
+
+graph1 <- ggplot(data = table2[table2$region == "wroiAD", ], aes(x = Roi, y = sens)) + 
           coord_cartesian(ylim = c(0, 100)) +
+          scale_y_continuous(breaks = scales::pretty_breaks(n = 10)) +
           geom_boxplot(aes(fill = method)) + 
-          xlab("Level of Induced Hypoactivity") + 
-          ylab("Sensibility") + ggtitle(paste0("Comparison of SCC's and SPM's levels of sensibility for wroiAD in z=", as.numeric(param.z))) +
-          guides(fill = guide_legend(title = "Legend"))
-
-graph2 <- ggplot(data = table[table$region == "wroiAD", ], 
+          xlab("Level of Induced Hypoactivity (%)") + 
+          ylab("Sensibility (%)") + 
+          # ggtitle(paste0("SCC's and SPM's sensibilities for wroiAD at z=", as.numeric(param.z))) +
+          guides(fill = guide_legend(title = "Legend")) +
+          scale_fill_brewer(palette = "Set1") 
+          
+graph2 <- ggplot(data = table2[table2$region == "wroiAD", ], 
           aes(x = Roi, y = esp)) + 
-          geom_boxplot(aes(fill = method)) + 
+          geom_boxplot(aes(fill = method, col = method)) + 
+          guides(col = FALSE) +
           coord_cartesian(ylim = c(0, 100)) + # necessary to specify because in most of cases the scale ranges from 90% to 100% only
-          xlab("Level of Induced Hypoactivity") + 
-          ylab("Especificity") + ggtitle(paste0("Comparison of SCC's and SPM's levels of especificity for wroiAD in z=", as.numeric(param.z))) +
-          guides(fill = guide_legend(title = "Legend"))
-
+          scale_y_continuous(breaks = scales::pretty_breaks(n = 10)) +
+          xlab("Level of Induced Hypoactivity (%)") + 
+          ylab("Especificity (%)") + 
+          guides(fill = guide_legend(title = "Legend")) +
+          scale_color_brewer(palette = "Set1") +
+          scale_fill_brewer(palette = "Set1") 
+          
 plot1 <- graph1 + theme_publish(); plot2 <- graph2 + theme_publish()
-grid.arrange(plot1, plot2, ncol = 2)
+print <- grid.arrange(plot1, plot2, ncol = 2)
 
-ggsave(filename = "academic_plot.png", 
-       plot = last_plot(), 
-       width = 210, 
-       height = 297, 
-       units = "mm")
+ggsave(filename = paste0("sens_esp_wroiAD_", as.numeric(param.z), ".png"), 
+       plot = print, 
+       width = 24, 
+       height = 18, 
+       units = "cm",
+       dpi = 600)
 
 
 #* Graph 3 & 4: Sensibility for All regions & All ROIs ----
 
+setwd(paste0("~/GitHub/SCCneuroimage/z", as.numeric(param.z), "/Figures")) 
+
 graph3 <- ggplot(data = table2, 
                  aes(x = Roi, y = sens)) + 
+                 scale_y_continuous(breaks = scales::pretty_breaks(n = 10)) +
                  geom_boxplot(outlier.colour = NULL, aes(fill = method), outlier.size = 1, lwd = 0.25) +
                  xlab("Hypoactivity (%)") + 
                  ylab("Sensibility (%)") + 
-                 ggtitle(paste0("Sensibility by region in z=", as.numeric(param.z))) +
-                 guides(fill = guide_legend(title = "Methods")) + 
-                 facet_wrap( ~ region, nrow = 3) 
+                 # ggtitle(paste0("Sensibility by region in z=", as.numeric(param.z))) +
+                 guides(fill = guide_legend(title = "Legend")) + 
+                 facet_wrap( ~ region, nrow = 3) +
+                 scale_fill_brewer(palette = "Set1") 
 
-graph3 
-
+  plot3 <- graph3 + theme_publish(base_size = 8)
+  plot3 <- grid.arrange(plot3)
+  
+  ggsave(filename = paste0("sens_ALL_", as.numeric(param.z), ".png"), 
+         plot = plot3, 
+         width = 22, 
+         height = 26, 
+         units = "cm",
+         dpi = 600)
 
 graph4 <- ggplot(data = table2, 
                  aes(x = Roi, y = esp)) + 
-                 geom_boxplot(outlier.colour = NULL, aes(fill = method), outlier.size = 1, lwd = 0.25) +
+                 scale_y_continuous(breaks = scales::pretty_breaks(n = 10)) +
+                 geom_boxplot(outlier.colour = NULL, aes(fill = method, col = method), outlier.size = 1, lwd = 0.25) +
+                 guides(col = FALSE) +
                  xlab("Hypoactivity (%)") + 
                  ylab("Specificity (%)") + 
                  coord_cartesian(ylim = c(0, 100)) +
-                 ggtitle(paste0("Specificity by region in z=", as.numeric(param.z))) +
-                 guides(fill = guide_legend(title = "Methods")) + 
-                 facet_wrap( ~ region, nrow = 3) 
+                 # ggtitle(paste0("Specificity by region in z=", as.numeric(param.z))) +
+                 guides(fill = guide_legend(title = "Legend")) + 
+                 facet_wrap( ~ region, nrow = 3) +
+                 scale_fill_brewer(palette = "Set1") +
+                 scale_color_brewer(palette = "Set1")
 
-graph4 
-
-plot3 <- graph3 + theme_publish(base_size = 8)
-plot4 <- graph4 + theme_publish(base_size = 8)
-grid.arrange(plot3, plot4, ncol = 2)
-
-ggsave(filename = "academic_plot.png", 
-       plot = last_plot(), 
-       width = 210, 
-       height = 297, 
-       units = "mm")
+  plot4 <- graph4 + theme_publish(base_size = 8); plot4
+  plot4 <- grid.arrange(plot4)
+  
+  ggsave(filename = paste0("esp_ALL_", as.numeric(param.z), ".png"), 
+         plot = plot4, 
+         width = 22, 
+         height = 26, 
+         units = "cm",
+         dpi = 600)
 
 
 #* Graph 5 & 6: PPV and NPV ----
 
+setwd(paste0("~/GitHub/SCCneuroimage/z", as.numeric(param.z), "/Figures")) 
+  
 graph5 <- ggplot(data = table2, 
           aes(x = Roi, y = ppv)) + 
           coord_cartesian(ylim = c(0, 100)) +
