@@ -36,7 +36,7 @@ require(ggplot2); require(gridExtra)
 
 #* Hyperparameter: ----
 
-param.z = 30
+param.z = 35
 
 ####  
 # PART 1: Load Data ----------
@@ -58,6 +58,7 @@ table$Roi <- as.character(table$Roi)
 attach(table)
 
 table2 <- rbind(table[table$method == "SCC", ], table[table$method == "SPM", ]) # just two methods (no strongSPM)
+
 
 ####  
 # PART 3: Graphs and Plots ----------
@@ -85,7 +86,7 @@ graph2 <- ggplot(data = table2[table2$region == "wroiAD", ],
           coord_cartesian(ylim = c(0, 100)) + # necessary to specify because in most of cases the scale ranges from 90% to 100% only
           scale_y_continuous(breaks = scales::pretty_breaks(n = 10)) +
           xlab("Level of Induced Hypoactivity (%)") + 
-          ylab("Especificity (%)") + 
+          ylab("Specificity (%)") + 
           guides(fill = guide_legend(title = "Legend")) +
           scale_color_brewer(palette = "Set1") +
           scale_fill_brewer(palette = "Set1") 
@@ -150,110 +151,118 @@ graph4 <- ggplot(data = table2,
          units = "cm",
          dpi = 600)
 
+  
+  plot_together <- grid.arrange(plot3, plot4, ncol = 2)
+  
+  ggsave(filename = paste0("sens_esp_ALL_", as.numeric(param.z), ".png"), 
+         plot = plot_together, 
+         width = 22, 
+         height = 26, 
+         units = "cm",
+         dpi = 600)
 
-#* Graph 5 & 6: PPV and NPV ----
+#* Graph 5 & 6: PPV and NPV for wROI ----
 
 setwd(paste0("~/GitHub/SCCneuroimage/z", as.numeric(param.z), "/Figures")) 
   
 graph5 <- ggplot(data = table2, 
           aes(x = Roi, y = ppv)) + 
+          scale_y_continuous(breaks = scales::pretty_breaks(n = 10)) +
           coord_cartesian(ylim = c(0, 100)) +
           geom_boxplot(aes(fill = method)) + 
-          # geom_smooth(data = table[table$method == "SCC", ], method = "loess", se = TRUE, color = "red", aes(group = 1)) +
-          # geom_smooth(data = table[table$method == "SPM", ], method = "loess", se = TRUE, color = "blue", aes(group = 2)) +
-          # geom_smooth(data = table[table$method == "SPMstrong", ], method = "loess", se = TRUE, color = "blue", aes(group = 3)) +
-          xlab("Level of Induced Hypoactivity") + 
-          ylab("PPV") + ggtitle(paste0("Comparison of SCC's and SPM's values of PPV and NPV in z=", as.numeric(param.z))) +
-          guides(fill = guide_legend(title = "Legend"))
+          xlab("Level of Induced Hypoactivity (%)") + 
+          ylab("Positive predicting Value") + 
+          # ggtitle(paste0("Comparison of SCC's and SPM's values of PPV and NPV in z=", as.numeric(param.z))) +
+          guides(fill = guide_legend(title = "Legend")) +
+          scale_fill_brewer(palette = "Set1") +
+          scale_color_brewer(palette = "Set1")
 
 graph5
 
 graph6 <- ggplot(data = table2, 
           aes(x = Roi, y = npv)) + 
+          scale_y_continuous(breaks = scales::pretty_breaks(n = 10)) +
           coord_cartesian(ylim = c(0, 100)) +
           geom_boxplot(aes(fill = method)) + 
-          # geom_smooth(data = table[table$method == "SCC", ], method = "loess", se = TRUE, color = "red", aes(group = 1)) +
-          # geom_smooth(data = table[table$method == "SPM", ], method = "loess", se = TRUE, color = "blue", aes(group = 2)) +
-          # geom_smooth(data = table[table$method == "SPMstrong", ], method = "loess", se = TRUE, color = "blue", aes(group = 3)) +
-          xlab("Level of Induced Hypoactivity") + 
-          ylab("NPV") + 
+          xlab("Level of Induced Hypoactivity (%)") + 
+          ylab("Negative Predicting Value") + 
           ggtitle(" ") +
-          guides(fill = guide_legend(title = "Legend"))
+          guides(fill = guide_legend(title = "Legend")) +
+          scale_fill_brewer(palette = "Set1") +
+          scale_color_brewer(palette = "Set1")
 
 graph6
 
 plot5 <- graph5 + theme_publish(); plot6 <- graph6 + theme_publish()
-grid.arrange(plot5, plot6, ncol = 2)
+plot5 <- grid.arrange(plot5, plot6, ncol = 2)
 
-ggsave(filename = "academic_plot.png", 
-       plot = last_plot(), 
-       width = 210, 
-       height = 297, 
-       units = "mm")
+  ggsave(filename = paste0("PPV_NPV_wroiAD_", as.numeric(param.z), ".png"), 
+         plot = plot5, 
+         width = 22, 
+         height = 26, 
+         units = "cm",
+         dpi = 600)
 
 
 #* Graph 7: PPV and NPV All regions & All ROIs ----
 
 graph7 <- ggplot(data = table2, 
-                 aes(x = Roi, y = ppv)) + 
+                 aes(x = Roi, y = ppv)) +
+                 scale_y_continuous(breaks = scales::pretty_breaks(n = 10)) +
                  geom_boxplot(outlier.colour = NULL, aes(fill = method), outlier.size = 1, lwd = 0.25) +
                  xlab("Hypoactivity (%)") + 
-                 ylab("PPV (%)") + 
+                 ylab("Positive Predictive Value (%)") + 
                  coord_cartesian(ylim = c(0, 100)) +
-                 ggtitle(paste0("PPV by region in z=", as.numeric(param.z))) +
+                 # ggtitle(paste0("PPV by region in z=", as.numeric(param.z))) +
                  guides(fill = guide_legend(title = "Methods")) + 
-                 facet_wrap( ~ region, nrow = 3) 
+                 facet_wrap( ~ region, nrow = 3) +
+                 scale_fill_brewer(palette = "Set1") +
+                 scale_color_brewer(palette = "Set1")
 
 graph7 
 
 graph8 <- ggplot(data = table2, 
-                 aes(x = Roi, y = npv)) + 
-                 geom_boxplot(outlier.colour = NULL, aes(fill = method), outlier.size = 1, lwd = 0.25) +
+                 aes(x = Roi, y = npv)) +
+                 scale_y_continuous(breaks = scales::pretty_breaks(n = 10)) +
+                 geom_boxplot(outlier.colour = NULL, aes(fill = method, col = method), outlier.size = 1, lwd = 0.25) +
                  xlab("Hypoactivity (%)") + 
-                 ylab("NPV (%)") + 
+                 ylab("Negative Predictive Value (%)") + 
                  coord_cartesian(ylim = c(0, 100)) +
-                 ggtitle(paste0("NPV by region in z=", as.numeric(param.z))) +
+                 # ggtitle(paste0("NPV by region in z=", as.numeric(param.z))) +
                  guides(fill = guide_legend(title = "Methods")) + 
-                 facet_wrap( ~ region, nrow = 3) 
+                 guides(col = FALSE) +
+                 facet_wrap( ~ region, nrow = 3) +
+                 scale_fill_brewer(palette = "Set1") +
+                 scale_color_brewer(palette = "Set1")
 
 graph8 
 
 plot7 <- graph7 + theme_publish(base_size = 8)
+plot7 <- grid.arrange(plot7, ncol = 1)
+
 plot8 <- graph8 +  theme_publish(base_size = 8)
-plot7
+plot8 <- grid.arrange(plot8, ncol = 1)
 
-ggsave(filename = "academic_plot.png", 
-       plot = last_plot(), 
-       width = 210, 
-       height = 297, 
-       units = "mm")
+plot9 <- grid.arrange(plot7, plot8, ncol = 2)
 
+  ggsave(filename = paste0("PPV_ALL_", as.numeric(param.z), ".png"), 
+         plot = plot7, 
+         width = 22, 
+         height = 26, 
+         units = "cm",
+         dpi = 600)
 
-result3 <- grid.arrange(plot3, ncol = 1)
-result4 <- grid.arrange(plot4, ncol = 1)
-result7 <- grid.arrange(plot7, ncol = 1)
-result8 <- grid.arrange(plot8, ncol = 1)
+    ggsave(filename = paste0("NPV_ALL_", as.numeric(param.z), ".png"), 
+         plot = plot8, 
+         width = 22, 
+         height = 26, 
+         units = "cm",
+         dpi = 600)
 
-ggsave(filename = "sens.png", 
-       plot = result3, 
-       width = 150, 
-       height = 210, 
-       units = "mm")
+    ggsave(filename = paste0("PPV_NPV_ALL_", as.numeric(param.z), ".png"), 
+         plot = plot9, 
+         width = 22, 
+         height = 26, 
+         units = "cm",
+         dpi = 600)
 
-ggsave(filename = "esp.png", 
-       plot = result4, 
-       width = 150, 
-       height = 210, 
-       units = "mm")
-
-ggsave(filename = "PPV.png", 
-       plot = result7, 
-       width = 150, 
-       height = 210, 
-       units = "mm")
-
-ggsave(filename = "NPV.png", 
-       plot = result8, 
-       width = 150, 
-       height = 210, 
-       units = "mm")

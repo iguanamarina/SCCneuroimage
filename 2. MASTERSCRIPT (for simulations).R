@@ -47,7 +47,7 @@ load("~/GitHub/SCCneuroimage/Functions/my_points.RData") # Function for getting 
 
 #* Hyper-parameters ----
 
-param.z = 30
+param.z = 35
 
 
 ####  
