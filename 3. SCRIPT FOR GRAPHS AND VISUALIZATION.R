@@ -31,12 +31,14 @@ memory.limit(30000000)     # This is needed on some PCs to increase memory allow
 #* Load up packages: ---- 
 
 # install.packages("envalysis")
-library(envalysis); library(tidyverse)
+install.packages("lemon")
+library(envalysis); library(tidyverse); library(lemon)
 require(ggplot2); require(gridExtra)
-
+  
+  
 #* Hyperparameter: ----
 
-param.z = 35
+param.z = 30
 
 ####  
 # PART 1: Load Data ----------
@@ -104,6 +106,10 @@ ggsave(filename = paste0("sens_esp_wroiAD_", as.numeric(param.z), ".png"),
 
 #* Graph 3 & 4: Sensibility for All regions & All ROIs ----
 
+# The use of the package "lemon" and functions for rewrapping
+# keeping axis lines in every graph comes mostly from the following page:
+# https://cran.r-project.org/web/packages/lemon/vignettes/facet-rep-labels.html
+
 setwd(paste0("~/GitHub/SCCneuroimage/z", as.numeric(param.z), "/Figures")) 
 
 graph3 <- ggplot(data = table2, 
@@ -114,12 +120,16 @@ graph3 <- ggplot(data = table2,
                  ylab("Sensibility (%)") + 
                  # ggtitle(paste0("Sensibility by region in z=", as.numeric(param.z))) +
                  guides(fill = guide_legend(title = "Legend")) + 
-                 facet_wrap( ~ region, nrow = 3) +
+                 facet_wrap( ~ region, ncol = 2) +
+                 facet_rep_wrap( ~ region, repeat.tick.labels = TRUE) +
+                 # facet_grid(rows= vars(V9), cols = vars(region)) +
+                 coord_capped_cart(bottom='both', left='both') +
+                 theme(panel.border=element_blank(), axis.line=element_line()) +
+                 theme_publish(base_size = 8) +
                  scale_fill_brewer(palette = "Set1") 
-
-  plot3 <- graph3 + theme_publish(base_size = 8)
-  plot3 <- grid.arrange(plot3)
-  
+ 
+plot3 <- grid.arrange(graph3)
+ 
   ggsave(filename = paste0("sens_ALL_", as.numeric(param.z), ".png"), 
          plot = plot3, 
          width = 22, 
@@ -127,6 +137,7 @@ graph3 <- ggplot(data = table2,
          units = "cm",
          dpi = 600)
 
+  
 graph4 <- ggplot(data = table2, 
                  aes(x = Roi, y = esp)) + 
                  scale_y_continuous(breaks = scales::pretty_breaks(n = 10)) +
@@ -164,18 +175,23 @@ graph4 <- ggplot(data = table2,
 #* Graph 5 & 6: PPV and NPV for wROI ----
 
 setwd(paste0("~/GitHub/SCCneuroimage/z", as.numeric(param.z), "/Figures")) 
-  
+
 graph5 <- ggplot(data = table2, 
-          aes(x = Roi, y = ppv)) + 
-          scale_y_continuous(breaks = scales::pretty_breaks(n = 10)) +
-          coord_cartesian(ylim = c(0, 100)) +
-          geom_boxplot(aes(fill = method)) + 
-          xlab("Level of Induced Hypoactivity (%)") + 
-          ylab("Positive predicting Value") + 
-          # ggtitle(paste0("Comparison of SCC's and SPM's values of PPV and NPV in z=", as.numeric(param.z))) +
-          guides(fill = guide_legend(title = "Legend")) +
-          scale_fill_brewer(palette = "Set1") +
-          scale_color_brewer(palette = "Set1")
+                 aes(x = Roi, y = ppv)) + 
+                 scale_y_continuous(breaks = scales::pretty_breaks(n = 10)) +
+                 geom_boxplot(aes(fill = method)) +
+                 xlab("Hypoactivity (%)") + 
+                 ylab("Positive Predictive Value (%)") + 
+                 # ggtitle(paste0("Sensibility by region in z=", as.numeric(param.z))) +
+                 guides(fill = guide_legend(title = "Legend")) + 
+                 facet_wrap( ~ region, ncol = 2) +
+                 facet_rep_wrap( ~ region, repeat.tick.labels = TRUE) +
+                 coord_capped_cart(bottom='both', left='both') +
+                 theme(panel.border=element_blank(), axis.line=element_line()) +
+                 theme_publish(base_size = 8) +
+                 scale_fill_brewer(palette = "Set1")   +
+                 coord_cartesian(ylim = c(0, 100)) # I get a warning message related to this
+                                                   # temporal solution was to bring it down here
 
 graph5
 
@@ -193,11 +209,11 @@ graph6 <- ggplot(data = table2,
 
 graph6
 
-plot5 <- graph5 + theme_publish(); plot6 <- graph6 + theme_publish()
-plot5 <- grid.arrange(plot5, plot6, ncol = 2)
+plot6 <- graph6 + theme_publish()
+graph5 <- grid.arrange(graph5)
 
-  ggsave(filename = paste0("PPV_NPV_wroiAD_", as.numeric(param.z), ".png"), 
-         plot = plot5, 
+  ggsave(filename = paste0("PPV_wroiAD_", as.numeric(param.z), ".png"), 
+         plot = graph5, 
          width = 22, 
          height = 26, 
          units = "cm",
