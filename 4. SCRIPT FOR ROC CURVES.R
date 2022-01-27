@@ -26,7 +26,7 @@
 
 #* Set working directory: ----
 
-setwd("C:/Users/Juan A. Arias/Desktop/Simulaciones PET CHUS") 
+setwd("~/GitHub/SCCneuroimage") 
 
 #* Tune Options: ----
 options(scipen = 6, digits = 6) # View outputs in non-scientific notation
@@ -38,11 +38,11 @@ library(gamair);library(oro.nifti);library(memisc);library(devtools);library(rem
 
 #* Load up functions: ----
 
-load("C:/Users/Juan A. Arias/Desktop/Simulaciones PET CHUS/f.clean.RData") # Function for NiFTi -> df
-load("C:/Users/Juan A. Arias/Desktop/Simulaciones PET CHUS/my_points.RData") # Function for getting relevant points from SCC
-load("C:/Users/Juan A. Arias/Desktop/Simulaciones PET CHUS/SCC matrix/z30/contour30.RData") # Contour at z=30
-load("C:/Users/Juan A. Arias/Desktop/Simulaciones PET CHUS/SCC matrix/z30/SCC_CN.RData") # Data for controls
-load("C:/Users/Juan A. Arias/Desktop/Simulaciones PET CHUS/SCC matrix/z30/SCC30results_multiple_alpha/SCC_roiAD_4.RData") # Data for pathological
+load("~/GitHub/SCCneuroimage/Functions/f.clean.RData") # Function for NiFTi -> df
+load("~/GitHub/SCCneuroimage/Functions/my_points.RData") # Function for getting relevant points from SCC
+load(paste0("~/GitHub/SCCneuroimage/z", as.numeric(param.z), "/", "contour", as.numeric(param.z), ".RData")) # Contour at z
+load(paste0("~/GitHub/SCCneuroimage/z", as.numeric(param.z), "/", "SCC_CN.RData")) # Data for controls
+load(paste0("~/GitHub/SCCneuroimage/z30/pseudoROC/SCC_MULTIPLE_ALPHA_roiAD_4.RData")) # Data for pathological
 
 #* Hyper-parameters: ----
 
@@ -107,7 +107,7 @@ SCC_MULTIPLE_ALPHA = scc.image(Ya = SCC_matrix, Yb = SCC_CN, Z = Z,
 #* Save/Load SCC: ----
     
 #save(SCC_MULTIPLE_ALPHA, file = paste0("SCC_MULTIPLE_ALPHA_", region, "_", roi,".RData"))
-load("C:/Users/Juan A. Arias/Desktop/Simulaciones PET CHUS/SCC matrix/z30/SCC30results_multiple_alpha/SCC_MULTIPLE_ALPHA_roiAD_4.RData")
+load(paste0("~/GitHub/SCCneuroimage/z30/pseudoROC/SCC_MULTIPLE_ALPHA_roiAD_4.RData")) # Data for pathological
      
   
 ####  
@@ -153,7 +153,7 @@ rm(ROI_data) # No longer necessary
 
 #* H_points: Hypotetical points for SCCs ----
 
-setwd(paste0("C:/Users/Juan A. Arias/Desktop/Simulaciones PET CHUS/SCC matrix/z", as.numeric(param.z) ,"/SCC", as.numeric(param.z), "results", "_multiple_alpha"))
+# setwd(paste0("C:/Users/Juan A. Arias/Desktop/Simulaciones PET CHUS/SCC matrix/z", as.numeric(param.z) ,"/SCC", as.numeric(param.z), "results", "_multiple_alpha"))
 region <- "roiAD" # again, nomenclature reasons in the neuroimage dataset
 alpha <- SCC_MULTIPLE_ALPHA[["alpha"]]
   
@@ -201,9 +201,9 @@ for (i in 1:length(alpha)) {
   }
 }
 
-setwd("C:/Users/Juan A. Arias/Desktop/Simulaciones PET CHUS/SCC matrix/z30/SCC30results_multiple_alpha")
+setwd("~/GitHub/SCCneuroimage/z30/pseudoROC")
 saveRDS(SCC_sens_esp, file = "SCC_sens_esp.RDS")
-tableSCC <- readRDS(paste0("C:/Users/Juan A. Arias/Desktop/Simulaciones PET CHUS/SCC matrix/z30/SCC30results_multiple_alpha/SCC_sens_esp.RDS"))
+tableSCC <- readRDS(paste0("~/GitHub/SCCneuroimage/z30/pseudoROC", "/SCC_sens_esp.RDS"))
 
 tableSCC$alpha <- factor(tableSCC$alpha,      
                          levels = alpha)
@@ -224,9 +224,9 @@ region <- "wroiAD"
 for (i in 1:length(alpha)) {
 
   if (i == 2) { # En i=2 el alpha es 1e-04 y eso da problemas con setwd, de ahí este IF-ELSE
-  setwd(paste0("C:/Users/Juan A. Arias/Desktop/Simulaciones PET CHUS/SCC matrix/z30/SCC30results_multiple_alpha/SPM/", formatC(alpha[2], format = "f", digits = 4)))
+  setwd(paste0("~/GitHub/SCCneuroimage/z30/pseudoROC", "/SPM/", formatC(alpha[2], format = "f", digits = 4)))
   } else {
-  setwd(paste0("C:/Users/Juan A. Arias/Desktop/Simulaciones PET CHUS/SCC matrix/z30/SCC30results_multiple_alpha/SPM/", as.character(alpha[i])))
+  setwd(paste0("~/GitHub/SCCneuroimage/z30/pseudoROC", "/SPM/", as.character(alpha[i])))
   }
   
   binary <- f.clean("binary.nii")
@@ -259,9 +259,9 @@ for (i in 1:length(alpha)) {
 
 }
 
-setwd("C:/Users/Juan A. Arias/Desktop/Simulaciones PET CHUS/SCC matrix/z30/SCC30results_multiple_alpha")
+setwd("~/GitHub/SCCneuroimage/z30/pseudoROC")
 saveRDS(SPM_sens_esp, file = "SPM_sens_esp.RDS")
-tableSPM <- readRDS(paste0("C:/Users/Juan A. Arias/Desktop/Simulaciones PET CHUS/SCC matrix/z30/SCC30results_multiple_alpha/SPM_sens_esp.RDS"))
+tableSPM <- readRDS(paste0("~/GitHub/SCCneuroimage/z30/pseudoROC/", "SPM_sens_esp.RDS"))
 
 tableSPM$alpha <- factor(tableSPM$alpha,      
                          levels = alpha)
@@ -334,9 +334,9 @@ plot(nw2$esp_i, pred2, type = "o", xlab = "1-Especificity", ylab = "Sensibility"
 #** Both plotted together:----
 
 plot(nw2$esp_i, pred2, type = "l", xlab = "1-Especificity", ylab = "Sensibility", main = "Estimated Sens vs Esp Graph for SPM/SCC")
-  lines(nw1$esp_i, pred,col = "black")  
-  points(dat2$sens ~ dat2$inv_esp, col = 2)
-  points(dat$sens ~ dat$inv_esp, col = 3)
+  lines(nw1$esp_i, pred, col = "black")  
+  points(dat2$sens ~ dat2$inv_esp, col = "darkblue")
+  points(dat$sens ~ dat$inv_esp, col = "red")
   abline(h = 1, v = 0)
   
   
