@@ -59,11 +59,18 @@ SCC_vs_SPM$roi <- as.character(SCC_vs_SPM$roi)
 
   
 table <- SCC_vs_SPM %>%
-  mutate(Sensibility = paste(round(sensMEAN, 2), round(sensSD, 2), sep = "\u00B1")) %>%
-  mutate(Specificity = paste(round(espMEAN, 2), round(espSD, 2), sep = "\u00B1")) %>%
-  mutate(PPV = paste(round(ppvMEAN, 2), round(ppvSD, 2), sep = "\u00B1")) %>%
-  mutate(NPV = paste(round(npvMEAN, 2), round(npvSD, 2), sep = "\u00B1")) %>%
+  mutate(Sensibility = paste(round(sensMEAN, 2), round(sensSD, 2), sep = "*")) %>%
+  mutate(Specificity = paste(round(espMEAN, 2), round(espSD, 2), sep = "*")) %>%
+  mutate(PPV = paste(round(ppvMEAN, 2), round(ppvSD, 2), sep = "*")) %>%
+  mutate(NPV = paste(round(npvMEAN, 2), round(npvSD, 2), sep = "*")) %>%
   arrange(method, roi, region) %>%
   dplyr::select(method, roi, region, Sensibility, Specificity, PPV, NPV)
+
 table
+
+# install.packages("xtable")
+library(xtable)
+print(xtable(table, type = "latex"), 
+      file = "table.tex",
+      include.rownames = FALSE)
 

@@ -117,23 +117,26 @@ graph3 <- ggplot(data = table2,
                  scale_y_continuous(breaks = scales::pretty_breaks(n = 10)) +
                  geom_boxplot(outlier.colour = NULL, aes(fill = method), outlier.size = 1, lwd = 0.25) +
                  xlab("Hypoactivity (%)") + 
-                 ylab("Sensibility (%)") + 
+                 ylab("Sensitivity (%)") + 
                  # ggtitle(paste0("Sensibility by region in z=", as.numeric(param.z))) +
                  guides(fill = guide_legend(title = "Legend")) + 
                  facet_wrap( ~ region, ncol = 2) +
                  facet_rep_wrap( ~ region, repeat.tick.labels = TRUE) +
                  # facet_grid(rows= vars(V9), cols = vars(region)) +
-                 coord_capped_cart(bottom='both', left='both') +
-                 theme(panel.border=element_blank(), axis.line=element_line()) +
-                 theme_publish(base_size = 8) +
+                 coord_capped_cart(bottom = 'both', left = 'both') +
+                 theme(panel.border = element_blank(), axis.line = element_line()) +
+                 theme(legend.text = element_text(size = 14)) +
+                 theme_publish(base_size = 12) +
                  scale_fill_brewer(palette = "Set1") 
  
+graph3
+
 plot3 <- grid.arrange(graph3)
  
   ggsave(filename = paste0("sens_ALL_", as.numeric(param.z), ".png"), 
          plot = plot3, 
-         width = 22, 
-         height = 26, 
+         width = 28.95, 
+         height = 18.3, 
          units = "cm",
          dpi = 600)
 
