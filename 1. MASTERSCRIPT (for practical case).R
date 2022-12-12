@@ -296,11 +296,11 @@ YcreatorCN <- function(i){
 
         # CN LOOP: now every CN-PPT will be one row, as ImageSCC package requires
         
-        SCC_matrix_CN <- matrix(ncol = 7505,nrow=0)
-        for (i in 1:length(names_CN)){
-          temp<-YcreatorCN(i)
-          SCC_matrix_CN<-rbind(SCC_matrix_CN,temp)    
-        }
+      SCC_matrix_CN <- matrix(ncol = 7505,nrow=0)
+      for (i in 1:length(names_CN)){
+        temp<-YcreatorCN(i)
+        SCC_matrix_CN<-rbind(SCC_matrix_CN,temp)    
+      }
 
     
 # AD function:
@@ -635,7 +635,11 @@ alpha.grid = c(0.10,0.05,0.01) # vector of confidence levels
 
 # Run one sample SCC construction:
 
-SCC_CN_1 = scc.image(Ya = Y_CN,Z = Z,d.est = d.est,d.band = d.band,r = r,
+x <- rep(1:91, each = 109, length.out = 9919) 
+y <- rep(1:109, length.out = 9919)
+Z <- cbind(as.matrix(x),as.matrix(y)); Z
+ 
+SCC_CN_1 = scc.image(Ya = SCC_CN,Z = Z,d.est = d.est,d.band = d.band,r = r,
                      V.est.a = V.est,Tr.est.a = Tr.est,
                      V.band.a = V.band,Tr.band.a = Tr.band,
                      penalty = TRUE,lambda = lambda,alpha.grid = alpha.grid,adjust.sigma = TRUE)

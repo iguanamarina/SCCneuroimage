@@ -225,20 +225,36 @@ graph5 <- grid.arrange(graph5)
 
 #* Graph 7: PPV and NPV All regions & All ROIs ----
 
+
 graph7 <- ggplot(data = table2, 
-                 aes(x = Roi, y = ppv)) +
+                 aes(x = Roi, y = ppv)) + 
                  scale_y_continuous(breaks = scales::pretty_breaks(n = 10)) +
                  geom_boxplot(outlier.colour = NULL, aes(fill = method), outlier.size = 1, lwd = 0.25) +
                  xlab("Hypoactivity (%)") + 
-                 ylab("Positive Predictive Value (%)") + 
-                 coord_cartesian(ylim = c(0, 100)) +
-                 # ggtitle(paste0("PPV by region in z=", as.numeric(param.z))) +
-                 guides(fill = guide_legend(title = "Methods")) + 
-                 facet_wrap( ~ region, nrow = 3) +
-                 scale_fill_brewer(palette = "Set1") +
-                 scale_color_brewer(palette = "Set1")
+                 ylab("Positive Predictive Value (%)") +
+                 # ggtitle(paste0("Sensibility by region in z=", as.numeric(param.z))) +
+                 guides(fill = guide_legend(title = "Legend")) + 
+                 facet_wrap( ~ region, ncol = 3) +
+                 facet_rep_wrap( ~ region, repeat.tick.labels = TRUE) +
+                 # facet_grid(rows= vars(V9), cols = vars(region)) +
+                 coord_capped_cart(bottom = 'both', left = 'both') +
+                 theme(panel.border = element_blank(), axis.line = element_line()) +
+                 theme(legend.text = element_text(size = 14)) +
+                 theme_publish(base_size = 12) +
+                 scale_fill_brewer(palette = "Set1") 
+                 # coord_cartesian(ylim = c(0, 100))
+ 
+graph7
 
-graph7 
+plot7 <- grid.arrange(graph7)
+ 
+  ggsave(filename = paste0("ppv_ALL_", as.numeric(param.z), ".png"), 
+         plot = plot7, 
+         width = 28.95, 
+         height = 18.3, 
+         units = "cm",
+         dpi = 600)
+
 
 graph8 <- ggplot(data = table2, 
                  aes(x = Roi, y = npv)) +
