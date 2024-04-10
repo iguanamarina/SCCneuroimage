@@ -1,105 +1,106 @@
-#######################################################################\
-#   
-#   THE OBJECTIVES OF THIS MASTER-SCRIPT ARE:
-#     
-#     - TO IMPORT NIFTI FILES INTO 'R'
-#     - TO CREATE AN ORDERED DATABASE FROM A SERIES OF PET IMAGES (.NIFTI)
-#     - 
-#     - TO GET A LIST OF THE PPT'S NAMES        
-#     - CREATE A NEW DATABASE FOR SCCs
-#     - INCLUDE NEW TRIANGULATION PARAMETERS
-#     - TEST SCC'S WITH DEFINITIVE DATA
-#
-#
-#######################################################################\
-
-
-### ################################################## ###
-#####                NEUROIMAGE DATA                  ####
-### ################################################## ###
-
-
-## PREVIOUS PROCESSING OF PET IMAGES (REALIGNEMENT, WRAPPING, CORREGISTRARION, NORMALIZATION, AND MASKING) DONE IN 'MATLAB'
-## CHECK OUT: ../SCCneuroimage/Matlab Preprocessing Code/
-## THESE ARE EXTENSIONS OF SPM MATLAB CODE WITH SLIGHT MODIFICATIONS IN ORDER TO LOOP THE PROCESS OVER FOR OUR 126 PPT'S
-  
+############################## ################### ############## ### 
+##
+## Script name: MASTERSCRIPT (for practical case)
+##
+## Purpose of script: Script to import NIFTI files to R, create a database, get PPT names,
+## create triangulation parameters, and carry on with SCCs calculation. This script asumes
+## that Matlab NIFTI pre-processing has already been carried out correctly.
+##
+## Date Created: 2022-01-10
+##
+## Author: Juan A. Arias (M.Sc.)
+## Email: juanantonio.arias.lopez@usc.es
+## Webpage: https://juan-arias.xyz
+##   
+############################## ################### ############## ### 
 
 ### ################################################## ###
 #####                 *PREAMBLE*                      ####
 ####         Installation of necessary packgs.         ###
 ### ################################################## ###
 
+# List of required packages
+packages <- c("mgcv", "gamair", "oro.nifti", "memisc")
 
-install.packages(c("mgcv","gamair","oro.nifti","memsic"))
-library(mgcv);library(gamair);library(oro.nifti);library(memisc)
-memory.size(max = TRUE) # Not useful in Linux systems
-
+# Check and install each package if it is not installed, then load it
+for (packageName in packages) {
+  if (!packageName %in% rownames(installed.packages())) {
+    install.packages(packageName)
+  }
+  library(packageName, character.only = TRUE)
+}
 
 ### ################################################## ###
 #####            *IMPORT NIFTI FILES*                 ####
 ####            f.clean  (PPT,z,x,y,pet)               ###
 ### ################################################## ###
 
+# Working directory path needs to be set according to user
+warning("Ensure the working directory path is set correctly for your system. This path needs to be the directory containing your .hdr/.img NIfTI files, mask, and Demographics .csv file. If you forked this project into your GitHub Folder, then you shouldn't have to change anything.")
 
-## Set as working directory -> directory with .hdr/.img NIfTI files, mask, and Demographics .csv file
+# Modify this path according to your local environment
+setwd("~/GitHub/SCCneuroimage/PETimg_masked for practical case")
 
-setwd("/Users/Juan A. Arias/Documents/GitHub/SCCneuroimage/PETimg_masked") # My Directory
-
+# Read demographics data
 demo <- read.csv2("Demographics.csv")
 
-f.clean <- function(name) { #### f.clean is meant for CLEANING ONE SINGLE-PPT DATA, then we loop it
-  
-  # Read NIFTI image, transform it to dataframe, preserve slice Z and organize the table
-  
-  ## Load Data
-  
-  file <- readNIfTI(fname = name, verbose = FALSE, warn = -1, reorient = TRUE, call = NULL, read_data = TRUE)
-  namex <- as.character(name)
-  n = img_data(file)
-  n = to.data.frame(n)
-  
-  ## Prepare data.frame base where further data from the loop will be integrated
-  
-  dataframe <- data.frame(z=integer(),x=integer(),y=integer(),pet=integer()) 
-  
-  # Loop for 79 slices of Z in the NiFtI image -> move to dataframe
-  
-  for (i in seq(1:79)) {
-    
-    n_lim = n[n$Var2==i,] # Select just one Z slice
-    n_lim$Var1=NULL
-    n_lim$Var2=NULL
-    
-    z <-rep(i,length.out=7505)
-    x <-rep(1:79, each=95, length.out = 7505) 
-    y <-rep(1:95,length.out = 7505)
-    attach(n_lim)
-    pet<-c(`1`,`2`,`3`,`4`,`5`,`6`,`7`,`8`,`9`,`10`,`11`,`12`,`13`,`14`,`15`,`16`,`17`,`18`,`19`,`20`,
-           `21`,`22`,`23`,`24`,`25`,`26`,`27`,`28`,`29`,`30`,`31`,`32`,`33`,`34`,`35`,`36`,`37`,`38`,`39`,`40`,
-           `41`,`42`,`43`,`44`,`45`,`46`,`47`,`48`,`49`,`50`,`51`,`52`,`53`,`54`,`55`,`56`,`57`,`58`,`59`,`60`,
-           `61`,`62`,`63`,`64`,`65`,`66`,`67`,`68`,`69`,`70`,`71`,`72`,`73`,`74`,`75`,`76`,`77`,`78`,`79`)
-    detach(n_lim)
-    
-    temp0 = data.frame(z,x,y,pet) # temporal dataframe
-    temp1 <- print(temp0) # unsure whether this is necessary but, if things work, don't touch them
-    dataframe <- rbind(dataframe,temp1) # sum new data with previous data
-    
-  }
-  
-  # Demographics: PPT, group (AD/CN), sex, age.
-  
-  demog <- demo[demo$PPT==namex,]
-  
-  PPT <- rep(demog$PPT,length.out=7505)
-  group <-rep(demog$Group,length.out=7505)
-  sex <-rep(demog$Sex,length.out=7505)
-  age <-rep(demog$Age,length.out=7505)
-  
-  temp2 <- data.frame(PPT,group,sex,age)
-  dataframe <- cbind(temp2,dataframe)
-  
-  print(dataframe) # Necessary for assigning an object name
+# Load function 'NeuroSCC::neuroCleaner' to clean and load data from NIFTI files
+# This function does: read NIFTI image, transform it to dataframe, preserve slice Z and organize the table.
 
+neuroCleaner <- function(name) {
+
+  # Load data into a dataframe
+  file <- oro.nifti::readNIfTI(fname = name, verbose = FALSE, warn = -1, reorient = TRUE, call = NULL, read_data = TRUE)
+  n <- memisc::to.data.frame(img_data(file))
+  
+  # Get File Name
+  namex <- as.character(name)
+  
+  # Get Dimensions of File
+  xDim <- file@dim_[2]
+  yDim <- file@dim_[3]  
+  dim <- xDim * yDim
+  
+  # Prepare data.frame base where further data from the loop will be integrated
+  dataframe <- data.frame(z = integer(), x = integer(), y = integer(), pet = integer())
+
+  # Loop for every slice in that Z; then attach to dataframe
+
+  for (i in seq(1:xDim)) {
+    n_lim <- n[n$Var2 == i, ] # Select just one Z slice
+    n_lim$Var1 <- NULL
+    n_lim$Var2 <- NULL
+
+    z <- rep(i, length.out = 7505)
+    x <- rep(1:xDim, each = yDim, length.out = 7505)
+    y <- rep(1:yDim, length.out = 7505)
+    attach(n_lim)
+    pet <- c(
+      `1`, `2`, `3`, `4`, `5`, `6`, `7`, `8`, `9`, `10`, `11`, `12`, `13`, `14`, `15`, `16`, `17`, `18`, `19`, `20`,
+      `21`, `22`, `23`, `24`, `25`, `26`, `27`, `28`, `29`, `30`, `31`, `32`, `33`, `34`, `35`, `36`, `37`, `38`, `39`, `40`,
+      `41`, `42`, `43`, `44`, `45`, `46`, `47`, `48`, `49`, `50`, `51`, `52`, `53`, `54`, `55`, `56`, `57`, `58`, `59`, `60`,
+      `61`, `62`, `63`, `64`, `65`, `66`, `67`, `68`, `69`, `70`, `71`, `72`, `73`, `74`, `75`, `76`, `77`, `78`, `79`
+    )
+    detach(n_lim)
+
+    temp0 <- data.frame(z, x, y, pet) # temporal dataframe
+    temp1 <- print(temp0) # unsure whether this is necessary but, if things work, don't touch them
+    dataframe <- rbind(dataframe, temp1) # sum new data with previous data
+  }
+
+  # Demographics: PPT, group (AD/CN), sex, age.
+
+  demog <- demo[demo$PPT == namex, ]
+
+  PPT <- rep(demog$PPT, length.out = 7505)
+  group <- rep(demog$Group, length.out = 7505)
+  sex <- rep(demog$Sex, length.out = 7505)
+  age <- rep(demog$Age, length.out = 7505)
+
+  temp2 <- data.frame(PPT, group, sex, age)
+  dataframe <- cbind(temp2, dataframe)
+
+  print(dataframe) # Necessary for assigning an object name
 }
 
 

@@ -3,18 +3,13 @@
 ## Script name: SCRIPT FOR ROC CURVES
 ##
 ## Purpose of script: To compute sort-of-ROC curves (sensibility vs especificity) 
-## for SCC and SPM and get AUC in z=30, roiAD, hypo=0'4. This might not be correct, 
-## anyway here is our attempt. 
+## for SCC and SPM and get AUC in z=30, roiAD, hypo=0'4. This might not be correct, anyway here is our attempt. 
 ##
 ## Date Created: 2021-11-26
 ##
 ## Author: Juan A. Arias (M.Sc.)
 ## Email: juanantonio.arias.lopez@usc.es
-## Webpage: https://messy-dataset.xyz
-##
-## Notes: This script is self-contained and nothing should be necessary but for
-## pressing enter again and again (after hyperparameter setup). However, results
-## may differ with slight changes and, still, Carmen didn't give an OK to this. 
+## Webpage: https://juan-arias.xyz
 ##   
 ############################## ################### ############## ### 
 

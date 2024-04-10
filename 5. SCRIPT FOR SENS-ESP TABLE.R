@@ -9,10 +9,7 @@
 ##
 ## Author: Juan A. Arias (M.Sc.)
 ## Email: juanantonio.arias.lopez@usc.es
-## Webpage: https://messy-dataset.xyz
-##
-## Notes:
-##       
+## Webpage: https://juan-arias.xyz
 ##   
 ############################## ################### ############## ### 
 

@@ -9,11 +9,7 @@
 ##
 ## Author: Juan A. Arias (M.Sc.)
 ## Email: juanantonio.arias.lopez@usc.es
-## Webpage: https://messy-dataset.xyz
-##
-## Notes: This script is self-contained and nothing should be necessary but for
-## pressing enter again and again (after hyperparameter setup). However, results
-## may differ with slight changes.
+## Webpage: https://juan-arias.xyz
 ##   
 ############################## ################### ############## ### 
 
