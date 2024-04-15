@@ -14,6 +14,7 @@
 ##   
 ############################## ################### ############## ### 
 
+
 ### ################################################## ###
 #####                 *PREAMBLE*                      ####
 ####         Installation of necessary packgs.         ###
@@ -29,6 +30,10 @@ for (packageName in packages) {
   }
   library(packageName, character.only = TRUE)
 }
+
+# Clean up temporary objects from the environment
+rm(packages)
+
 
 ### ################################################## ###
 #####            *IMPORT NIFTI FILES*                 ####
@@ -47,229 +52,254 @@ demo <- read.csv2("Demographics.csv")
 # Load function 'NeuroSCC::neuroCleaner' to clean and load data from NIFTI files
 # This function does: read NIFTI image, transform it to dataframe, preserve slice Z and organize the table.
 
-neuroCleaner <- function(name) {
-
-  # Load data into a dataframe
-  file <- oro.nifti::readNIfTI(fname = name, verbose = FALSE, warn = -1, reorient = TRUE, call = NULL, read_data = TRUE)
-  n <- memisc::to.data.frame(img_data(file))
+  neuroCleaner <- function(name, demo) {
+    # Load data into a dataframe
+    file <- oro.nifti::readNIfTI(fname = name, verbose = FALSE, warn = -1, reorient = TRUE, call = NULL, read_data = TRUE)
+    n <- memisc::to.data.frame(img_data(file))
   
-  # Get File Name
-  namex <- as.character(name)
+    # Get File Name
+    namex <- as.character(name)
   
-  # Get Dimensions of File
-  xDim <- file@dim_[2]
-  yDim <- file@dim_[3]  
-  dim <- xDim * yDim
+    # Get Dimensions of File
+    xDim <- file@dim_[2]
+    yDim <- file@dim_[3]
+    dim <- xDim * yDim
   
-  # Prepare data.frame base where further data from the loop will be integrated
-  dataframe <- data.frame(z = integer(), x = integer(), y = integer(), pet = integer())
-
-  # Loop for every slice in that Z; then attach to dataframe
-
-  for (i in seq(1:xDim)) {
-    n_lim <- n[n$Var2 == i, ] # Select just one Z slice
-    n_lim$Var1 <- NULL
-    n_lim$Var2 <- NULL
-
-    z <- rep(i, length.out = 7505)
-    x <- rep(1:xDim, each = yDim, length.out = 7505)
-    y <- rep(1:yDim, length.out = 7505)
-    attach(n_lim)
-    pet <- c(
-      `1`, `2`, `3`, `4`, `5`, `6`, `7`, `8`, `9`, `10`, `11`, `12`, `13`, `14`, `15`, `16`, `17`, `18`, `19`, `20`,
-      `21`, `22`, `23`, `24`, `25`, `26`, `27`, `28`, `29`, `30`, `31`, `32`, `33`, `34`, `35`, `36`, `37`, `38`, `39`, `40`,
-      `41`, `42`, `43`, `44`, `45`, `46`, `47`, `48`, `49`, `50`, `51`, `52`, `53`, `54`, `55`, `56`, `57`, `58`, `59`, `60`,
-      `61`, `62`, `63`, `64`, `65`, `66`, `67`, `68`, `69`, `70`, `71`, `72`, `73`, `74`, `75`, `76`, `77`, `78`, `79`
-    )
-    detach(n_lim)
-
-    temp0 <- data.frame(z, x, y, pet) # temporal dataframe
-    temp1 <- print(temp0) # unsure whether this is necessary but, if things work, don't touch them
-    dataframe <- rbind(dataframe, temp1) # sum new data with previous data
+    # Prepare base data.frame where data from the loop will be integrated
+    dataframe <- data.frame(z = integer(), x = integer(), y = integer(), pet = integer())
+  
+      # Loop for every slice in that Z; then attach to dataframe
+      for (i in seq(1:xDim)) {
+        n_lim <- n[n$Var2 == i, ] # Select just one Z slice
+        n_lim$Var1 <- NULL
+        n_lim$Var2 <- NULL
+    
+        z <- rep(i, length.out = dim)
+        x <- rep(1:xDim, each = yDim, length.out = dim)
+        y <- rep(1:yDim, length.out = dim)
+    
+        pet <- unlist(n_lim) # Convert n_lim to a vector and avoid using attach
+    
+        temp <- data.frame(z, x, y, pet) # Temporal dataframe
+        dataframe <- rbind(dataframe, temp) # Sum new data with previous data
+      }
+  
+    # Check if demographic data contains required columns
+    requiredColumns <- c("PPT", "Group", "Sex", "Age")
+    if (!all(requiredColumns %in% names(demo))) {
+      stop("Demographic data must contain columns: PPT, Group, Sex, and Age")
+    }
+  
+    # Extract demographic data
+    demog <- demo[demo$PPT == namex, ]
+    if (nrow(demog) == 0) {
+      stop("No demographic data found for the given participant.")
+    }
+  
+      # Replicate demographic data for each pixel
+      PPT <- rep(demog$PPT, length.out = dim)
+      group <- rep(demog$Group, length.out = dim)
+      sex <- rep(demog$Sex, length.out = dim)
+      age <- rep(demog$Age, length.out = dim)
+    
+      temp2 <- data.frame(PPT, group, sex, age)
+      dataframe <- cbind(temp2, dataframe)
+  
+    return(dataframe) # Return the dataframe
   }
 
-  # Demographics: PPT, group (AD/CN), sex, age.
-
-  demog <- demo[demo$PPT == namex, ]
-
-  PPT <- rep(demog$PPT, length.out = 7505)
-  group <- rep(demog$Group, length.out = 7505)
-  sex <- rep(demog$Sex, length.out = 7505)
-  age <- rep(demog$Age, length.out = 7505)
-
-  temp2 <- data.frame(PPT, group, sex, age)
-  dataframe <- cbind(temp2, dataframe)
-
-  print(dataframe) # Necessary for assigning an object name
-}
-
-
 # Example of conversion from NIFTI to R dataframe:
-
-example = f.clean("003_S_1059")
-head(example)  # Some values are Zeros due to the masking process
+example = neuroCleaner("003_S_1059", demo = demo)
 
 
 ### ################################################## ###
 #####             *CREATE   DATABASE*                 ####
 ### ################################################## ###
 
+# (!) You can skip this part until the end of MEAN AVERAGE NORMALIZATION where
+# there is code to directly load 'database.RDS' from the repo.
 
-files <- list.files(path=getwd(), pattern="*.img", full.names=F, recursive=FALSE) # list of files
-files <- gsub(files, pattern=".img$", replacement="") # remove file extension .img
-files
+# Get full list of files with extension .img
+files <- list.files(path = getwd(), pattern = "*.img", full.names = FALSE, recursive = FALSE) 
+files <- sub(pattern = "\\.img$", replacement = "", x = files) 
 
-database <- data.frame(PPT=integer(),group=integer(),sex=integer(),age=integer(),z=integer(),x=integer(),y=integer(),pet=integer())
-#create data.frame to include data
+# Print the name of those files, check that everything is alright
+print(files)
 
-for (i in 1:length(files)) { #loop to include every PPT in the dataframe
-  
-  temporal <- f.clean(files[i])
-  database <- rbind(database,temporal)
-  
+# Create database to 'rbind' results from neuroCleaner
+database <- data.frame(PPT = integer(), group = integer(), sex = integer(), age = integer(), z = integer(), x = integer(), y = integer(), pet = numeric())
+
+# Loop to include every PPT in the dataframe
+for (i in seq_along(files)) {
+  temporal <- neuroCleaner(files[i], demo = demo)
+  database <- rbind(database, temporal)
 }
 
-nrow(database[database$pet<0,]) # There are negative values (ilogical)
-
-database$pet[database$pet<0]<- NaN  # Convert negatives to NaN 
-database$pet[database$pet==0] <- NaN # Convert zeros to NaN 
+# Convert negatives and zeros to NaN in the 'pet' column
+database$pet[database$pet <= 0] <- NaN 
 
 
 ### ####################################################### ###
 #####           *MEAN AVERAGE NORMALIZATION*               ####
 ### ####################################################### ###
 
+# Initialize 'pet_normal'
+database$pet_normal <- NA  
 
-mean.data <- data.frame(pet=integer(),pet_normal=integer())
-
-for (i in 1:length(files)) {
-  
-  temp <- database[database$PPT==files[i],8]
-  #temp <- temp[,8]
-  mean <- mean(as.numeric(temp),na.rm=T)
-  pet_normal <- as.data.frame(temp/mean)
-  colnames(pet_normal)<-c("pet_normal")
-  temp <- cbind(temp,pet_normal)
-  show(temp)    
-  mean.data <- rbind(mean.data,temp)
-  
+for (i in seq_along(files)) {
+  temp <- database[database$PPT == files[i], 'pet']
+  mean_value <- mean(as.numeric(temp), na.rm = TRUE)
+  database$pet_normal[database$PPT == files[i]] <- temp / mean_value
 }
 
-mean.data <- mean.data[,2]
-database <- cbind(database,mean.data)
-colnames(database)<-c("PPT","group","sex","age","z","x","y","pet","pet_normal")
+# Remove old 'pet' column
+database <- database[, -which(colnames(database) == "pet")]
 
-# Export complete database (with non normalized and normalized values)
-## Set as working directory -> directory where you want to save Database.Rdata
+# Export complete database 
+# setwd("~/GitHub/SCCneuroimage")
+# saveRDS(database, file = "Auxiliary Files/database.RDS") # export as .RDS IF DESIRABLE
 
-setwd("/Users/Juan A. Arias/Documents/GitHub/SCCneuroimage") 
-write.table(database,file="Database.csv",sep=";",na="NA") #export as .csv IF DESIRABLE
-save(database,file="database.Rda") #export as .Rda IF DESIRABLE
-
-
-# now to continue with our workflow:
-
-database<-database[,-8]   # Usually you will be working with normalized PET values but you can skip this step 
-                          # if you want to keep the non-normalized values for something
+# (!) LOAD THE DATABASE HERE IF YOU WANT TO SAVE TIME
+database <- readRDS("~/GitHub/SCCneuroimage/Auxiliary Files/database.RDS")
 
 
 ### ########################################################## ###
-#####          SIMULTANEOUS CONFIDENCE CORRIDORS              ####
+#####      SIMULTANEOUS CONFIDENCE CORRIDORS (preamble)       ####
 ### ########################################################## ###
 
+# This part of the code needs a series of packages which are only available on GitHub
+# Besides, we will also need some extra packages not load yet:
 
-# load("C:/Users/Juan A. Arias/Documents/GitHub/SCCneuroimage/database.Rda") # if not loaded already
+# List of CRAN packages
+packagesCRAN <- c("devtools", "remotes", "readr", "imager", "itsadug", "ggplot2", "contoureR", "fields")
 
-# This part of the code needs a series of packages which to date (09/2020) are only available at GitHub
+# Install CRAN packages if not already installed and load them
+for (pkg in packagesCRAN) {
+  if (!require(pkg, character.only = TRUE)) {
+    install.packages(pkg, dependencies = TRUE)
+    library(pkg, character.only = TRUE)
+  }
+}
 
-# Install packages from GitHub: #
+# Set environment to not stop installations due to warning messages
+Sys.setenv("R_REMOTES_NO_ERRORS_FROM_WARNINGS" = TRUE)
 
-install.packages(c("devtools","remotes","readr","imager","itsadug","ggplot2","contoureR","fields"))
-library(devtools);library(remotes);library(readr);library(imager);library(itsadug);library(ggplot2);library(contoureR);library(fields)
+# List of GitHub packages
+packagesGithub <- c("funstatpackages/BPST", "funstatpackages/Triangulation", "funstatpackages/ImageSCC")
 
-Sys.setenv("R_REMOTES_NO_ERRORS_FROM_WARNINGS"=TRUE) # Forces installation to finish even with warning messages (EXTREMELY NECESSARY)
-remotes::install_github("funstatpackages/BPST")
-remotes::install_github("funstatpackages/Triangulation")
-remotes::install_github("funstatpackages/ImageSCC")
+# Install and load GitHub packages
+for (pkg in packagesGithub) {
+  remotes::install_github(pkg)
+}
 
-library(BPST);library(Triangulation);library(ImageSCC)
+# Load all packages
+library(devtools); library(remotes); library(readr); library(imager); library(itsadug); library(ggplot2); library(contoureR); library(fields); library(BPST); library(Triangulation); library(ImageSCC)
 
-
-
-# Preliminary modifications and exploratory analysis:
-
-Data<-database
-attach(Data)
-head(Data)
-str(Data)
+# Clean up temporary objects from the environment
+rm(packagesCRAN, packagesGithub)
 
 
 ### ########################################################## ###
 #####           *COMPREHENSIVE LISTS OF PPT'S*                ####
 ### ########################################################## ###
 
+# In Functional Data Analysis (FDA), data transformation is essential. Specifically, we must format the data into 
+# data.frames where each participant (PPT) is represented by a single row, and each column corresponds to one of the 7505 
+# PET values from a selected brain slice (79*95=7505). This approach is necessary for FDA as it allows us to analyze one 
+# brain slice at a time. Additionally, we need to predefine lists of PPTs by their sex and diagnostic group 
+# categories (e.g., AD, CN, male, female) to facilitate the creation of SCC matrices tailored to these groupings.
 
-# Working in a Functional Data Analysis (FDA) framework requires some transformations of the data. Namely, we will need to
-# create data.frames in which every PPT corresponds to one row and each column to one PET value out of 7505 in a slice. 
-# This is the way of approaching the data in FDA and obviously we will be limited to one brain slice at a time. 
-# In order to create the SCC matrices we will also need the PPTs names listed depending on their sex, group... that's
-# why we do it here in advance for AD, CN, female & male, <75 & >75... and combinations.
+# Create lists of names for Alzheimer's Disease (AD) and Control (CN) groups using unique participant identifiers
+names_AD <- unique(database$PPT[database$group == "AD"])
+names_CN <- unique(database$PPT[database$group == "CN"])
+
+# Create lists of names for males and females using unique participant identifiers
+names_M <- unique(database$PPT[database$sex == "F"])
+names_F <- unique(database$PPT[database$sex == "M"])
+
+# Create combined lists for AD and CN by sex using unique participant identifiers
+names_AD_M <- unique(database$PPT[database$group == "AD" & database$sex == "M"])
+names_AD_F <- unique(database$PPT[database$group == "AD" & database$sex == "F"])
+names_CN_M <- unique(database$PPT[database$group == "CN" & database$sex == "M"])
+names_CN_F <- unique(database$PPT[database$group == "CN" & database$sex == "F"])
 
 
-names<-as.vector(Data[,1])
-names<-names[duplicated(names)!=TRUE]
-((length(names))*592895)==nrow(Data)  # Every PPT has 592.895 measures. PPT*measures=nrow(Data). Should return a TRUE
+### ########################################################## ###
+#####                  *GENERATE MATRICES*                    ####
+### ########################################################## ###
 
 
-# LIST OF CONTROL PPT'S #
+# !!! debugear aqui
 
-names_CN<-as.vector(Data[,1])[Data$group=="CN"]
-names_CN<-names_CN[duplicated(names_CN)!=TRUE]; names_CN
 
-# LIST OF ALZHEIMER DISEASE PPT'S #
+# Function to obtain dimensions from a DICOM file
+getDimensions <- function(filename = NULL) {
+  # If no filename is provided, find the first .img file in the current working directory
+  if (is.null(filename)) {
+    files <- list.files(path = getwd(), pattern = "\\.img$", full.names = TRUE, recursive = FALSE)
+    if (length(files) == 0) {
+      stop("No .img files found in the directory.")
+    }
+    filename <- files[1]  # Use the first file found
+  }
+  
+  # Load the data using oro.nifti
+  file <- oro.nifti::readNIfTI(fname = filename, verbose = FALSE, warn = -1, reorient = TRUE)
+  
+  # Get dimensions X and Y, and calculate 'dim'
+  xDim <- file@dim_[2]
+  yDim <- file@dim_[3]
+  dim <- xDim * yDim
+  
+  # Return a list with X, Y, and 'dim' dimensions
+  return(list(xDim = xDim, yDim = yDim, dim = dim))
+}
 
-names_AD<-as.vector(Data[,1])[Data$group=="AD"]
-names_AD<-names_AD[duplicated(names_AD)!=TRUE]; names_AD
+# If 'dim' is not predefined, obtain it using:
+dimensions <- getDimensions()
+dim <- dimensions$dim
 
-# LIST OF MALE CONTROL PPT'S #
+# Function to create matrices based on participant identifier (PPT) and sex
+matrixCreator <- function(names, z_slice = 30) {
+  # Ensure 'dim' is defined. Here we assume 'dim' is obtained from 'getDimensions' and globally available
+  if (!exists("dim")) {
+    stop("Dimension 'dim' is not defined. Please define it using getDimensions().")
+  }
+  
+  # Initialize the SCC matrix with appropriate dimensions
+  SCC_matrix <- matrix(ncol = dim, nrow = 0)
+  
+  for (i in seq_along(names)) {
+    # Subset data for each participant at the specified Z slice and take the first 'dim' entries
+    Y <- subset(database, database$ppt == names[i] & database$z == z_slice)
+    Y <- Y[1:dim, "pet_normal"]  
+    Y <- as.matrix(Y)
+    Y <- t(Y)
+    Y[is.na(Y)] <- 0  # Replace NA and NaN values with 0
+    
+    # Bind each participant's data to the SCC matrix
+    SCC_matrix <- rbind(SCC_matrix, Y)
+  }
+  
+  return(SCC_matrix)
+}
 
-names_CN_M<-as.vector(Data[,1])[Data$sex=="M" & Data$group=="CN"]
-names_CN_M<-names_CN_M[duplicated(names_CN_M)!=TRUE]; names_CN_M
+# Create matrices for each group and sex using the matrixCreator function
 
-# LIST OF FEMALE CONTROL PPT'S #
+matrices <- list()
+matrices$AD <- matrixCreator(names_AD)
+matrices$CN <- matrixCreator(names_CN)
+matrices$Male <- matrixCreator(names_M)
+matrices$Female <- matrixCreator(names_F)
 
-names_CN_F<-as.vector(Data[,1])[Data$sex=="F" & Data$group=="CN"]
-names_CN_F<-names_CN_F[duplicated(names_CN_F)!=TRUE]; names_CN_F
+matrices$AD_M <- matrixCreator(names_AD_M)
+matrices$AD_F <- matrixCreator(names_AD_F)
+matrices$CN_M <- matrixCreator(names_CN_M)
+matrices$CN_F <- matrixCreator(names_CN_F)
 
-# LIST OF FEMALE ALZHEIMER PPT'S #
 
-names_AD_F<-as.vector(Data[,1])[Data$sex=="F" & Data$group=="AD"]
-names_AD_F<-names_AD_F[duplicated(names_AD_F)!=TRUE];names_AD_F
 
-# LIST OF MALE ALZHEIMER PPT'S #
 
-names_AD_M<-as.vector(Data[,1])[Data$sex=="M" & Data$group=="AD"]
-names_AD_M<-names_AD_M[duplicated(names_AD_M)!=TRUE]; names_AD_M
-
-# LIST OF ALZHEIMER PPT'S <=75 Y.O. #
-
-names_AD_less_75<-as.vector(Data[,1])[Data$age<=75 & Data$group=="AD"]
-names_AD_less_75<-names_AD_less_75[duplicated(names_AD_less_75)!=TRUE]; names_AD_less_75
-
-# LIST OF ALZHEIMER PPT'S >75 Y.O. #
-
-names_AD_more_75<-as.vector(Data[,1])[Data$age>75 & Data$group=="AD"]
-names_AD_more_75<-names_AD_more_75[duplicated(names_AD_more_75)!=TRUE]; names_AD_more_75
-
-# LIST OF CONTROL PPT'S <=75 Y.O. #
-
-names_CN_less_75<-as.vector(Data[,1])[Data$age<=75 & Data$group=="CN"]
-names_CN_less_75<-names_CN_less_75[duplicated(names_CN_less_75)!=TRUE]; names_CN_less_75
-
-# LIST OF CONTROL PPT'S >75 Y.O. #
-
-names_CN_more_75<-as.vector(Data[,1])[Data$age>75 & Data$group=="CN"]
-names_CN_more_75<-names_CN_more_75[duplicated(names_CN_more_75)!=TRUE]; names_CN_more_75
 
 
 
@@ -287,7 +317,7 @@ names_CN_more_75<-names_CN_more_75[duplicated(names_CN_more_75)!=TRUE]; names_CN
 # CN function:
 
 YcreatorCN <- function(i){
-  Y <- subset(Data, Data$PPT==names_CN[i] & Data$z==30) # Y = Choose by PPT and Z=30, group=change depending on the SCC you need
+  Y <- subset(database, database$PPT==names_CN[i] & database$z==30) # Y = Choose by PPT and Z=30, group=change depending on the SCC you need
   Y <- Y[1:7505,8] # Make sure to keep only 7505 (problematic before) and column 8 (normalized PET responses)
   Y <- as.matrix(Y)
   Y=t(Y) 
@@ -307,7 +337,7 @@ YcreatorCN <- function(i){
 # AD function:
 
 YcreatorAD <- function(i){
-  Y <- subset(Data, Data$PPT==names_AD[i] & Data$z==30) 
+  Y <- subset(database, database$PPT==names_AD[i] & database$z==30) 
   Y <- Y[1:7505,8] 
   Y <- as.matrix(Y)
   Y=t(Y) 
@@ -330,7 +360,7 @@ YcreatorAD <- function(i){
 # AD + Female function:
 
 YcreatorAD_F <- function(i){
-  Y <- subset(Data, Data$PPT==names_AD_F[i] & Data$z==30) 
+  Y <- subset(database, database$PPT==names_AD_F[i] & database$z==30) 
   Y <- Y[1:7505,8]
   Y <- as.matrix(Y)
   Y=t(Y) 
@@ -350,7 +380,7 @@ YcreatorAD_F <- function(i){
 # AD + Male function:
 
 YcreatorAD_M <- function(i){
-  Y <- subset(Data, Data$PPT==names_AD_M[i] & Data$z==30) 
+  Y <- subset(database, database$PPT==names_AD_M[i] & database$z==30) 
   Y <- Y[1:7505,8] 
   Y <- as.matrix(Y)
   Y=t(Y) 
@@ -372,7 +402,7 @@ YcreatorAD_M <- function(i){
 # CN + Female function:
 
 YcreatorCN_F <- function(i){
-  Y <- subset(Data, Data$PPT==names_CN_F[i] & Data$z==30) 
+  Y <- subset(database, database$PPT==names_CN_F[i] & database$z==30) 
   Y <- Y[1:7505,8] 
   Y <- as.matrix(Y)
   Y=t(Y) 
@@ -393,7 +423,7 @@ YcreatorCN_F <- function(i){
 # CN + Male function:
 
 YcreatorCN_M <- function(i){
-  Y <- subset(Data, Data$PPT==names_CN_M[i] & Data$z==30) 
+  Y <- subset(database, database$PPT==names_CN_M[i] & database$z==30) 
   Y <- Y[1:7505,8] 
   Y <- as.matrix(Y)
   Y=t(Y) 
@@ -417,7 +447,7 @@ YcreatorCN_M <- function(i){
 # CN <75 function:
 
 YcreatorCN_less_75 <- function(i){
-  Y <- subset(Data, Data$PPT==names_CN_less_75[i] & Data$z==30) 
+  Y <- subset(database, database$PPT==names_CN_less_75[i] & database$z==30) 
   Y <- Y[1:7505,8] 
   Y <- as.matrix(Y)
   Y=t(Y) 
@@ -437,7 +467,7 @@ YcreatorCN_less_75 <- function(i){
 # CN >75 function:
 
 YcreatorCN_more_75 <- function(i){
-  Y <- subset(Data, Data$PPT==names_CN_more_75[i] & Data$z==30) 
+  Y <- subset(database, database$PPT==names_CN_more_75[i] & database$z==30) 
   Y <- Y[1:7505,8] 
   Y <- as.matrix(Y)
   Y=t(Y) 
@@ -457,7 +487,7 @@ YcreatorCN_more_75 <- function(i){
 # AD <75 function:
 
 YcreatorAD_less_75 <- function(i){
-  Y <- subset(Data, Data$PPT==names_AD_less_75[i] & Data$z==30)
+  Y <- subset(database, database$PPT==names_AD_less_75[i] & database$z==30)
   Y <- Y[1:7505,8] 
   Y <- as.matrix(Y)
   Y=t(Y) 
@@ -477,7 +507,7 @@ YcreatorAD_less_75 <- function(i){
 # AD >75 function:
 
 YcreatorAD_more_75 <- function(i){
-  Y <- subset(Data, Data$PPT==names_AD_more_75[i] & Data$z==30) 
+  Y <- subset(database, database$PPT==names_AD_more_75[i] & database$z==30) 
   Y <- Y[1:7505,8] 
   Y <- as.matrix(Y)
   Y=t(Y) 
